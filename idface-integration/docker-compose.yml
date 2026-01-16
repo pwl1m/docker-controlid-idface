@@ -1,0 +1,11 @@
+services:
+  idface-integration:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+    restart: unless-stopped
