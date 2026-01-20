@@ -1,269 +1,269 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
+const config = require('../config');
 
 class IDFaceService {
     constructor() {
-        this.deviceIp = process.env.IDFACE_DEVICE_IP;
-        this.login = process.env.IDFACE_LOGIN || 'admin';
-        this.password = process.env.IDFACE_PASSWORD || 'admin';
         this.session = null;
         this.sessionCheckInterval = null;
+        this.sessionLifetime = 5 * 60 * 1000; // 5 minutes
     }
 
     get baseUrl() {
-        return `http://${this.deviceIp}`;
+        return `http://${config.device.ip}`;
     }
 
-    /**
-     * Login no dispositivo
-     * POST /login.fcgi
-     */
-    async authenticate() {
-        try {
-            logger.info(`[AUTH] Conectando ao dispositivo ${this.deviceIp}...`);
-            
-            const response = await axios.post(`${this.baseUrl}/login.fcgi`, {
-                login: this.login,
-                password: this.password
-            });
-
-            this.session = response.data.session;
-            logger.info(`[AUTH] ✅ Login realizado! Session: ${this.session}`);
-            
-            // Iniciar verificação periódica da sessão
-            this.startSessionCheck();
-            
-            return this.session;
-        } catch (error) {
-            logger.error(`[AUTH] ❌ Erro no login: ${error.message}`);
-            throw error;
-        }
+    get credentials() {
+        return {
+            login: config.device.login,
+            password: config.device.password
+        };
     }
 
-    /**
-     * Verificar se a sessão é válida
-     * POST /session_is_valid.fcgi
-     */
     async isSessionValid() {
         if (!this.session) return false;
-
         try {
-            const response = await axios.post(
-                `${this.baseUrl}/session_is_valid.fcgi?session=${this.session}`
-            );
-            return response.data.session_is_valid === true;
+            const url = `${this.baseUrl}/session_is_valid.fcgi?session=${this.session}`;
+            const resp = await axios.post(url, {}, { timeout: 5000 });
+            return resp.data?.session_is_valid === true;
         } catch (error) {
-            logger.warn(`[AUTH] Sessão inválida ou expirada`);
+            logger.warn('Session validation failed:', error.message);
             return false;
         }
     }
 
-    /**
-     * Garantir que temos uma sessão válida
-     */
+    async authenticate() {
+        try {
+            const url = `${this.baseUrl}/login.fcgi`;
+            const { login, password } = this.credentials;
+            
+            logger.info(`Will login to ip: ${config.device.ip}`);
+            
+            const resp = await axios.post(url, { login, password }, { timeout: 10000 });
+            
+            if (resp.data?.session) {
+                this.session = resp.data.session;
+                logger.info('login success:', resp.data);
+                this.startSessionCheck();
+                return { success: true, session: this.session };
+            }
+            
+            throw new Error('No session returned');
+        } catch (error) {
+            logger.error('Error performing request:', error.message);
+            throw error;
+        }
+    }
+
     async ensureAuthenticated() {
         if (!this.session) {
             await this.authenticate();
             return;
         }
-
-        const isValid = await this.isSessionValid();
-        if (!isValid) {
-            logger.info('[AUTH] Sessão expirada, reconectando...');
+        const valid = await this.isSessionValid();
+        if (!valid) {
+            logger.info('Session expired, re-authenticating...');
             await this.authenticate();
         }
     }
 
-    /**
-     * Verificar sessão periodicamente (a cada 5 minutos)
-     */
     startSessionCheck() {
-        if (this.sessionCheckInterval) {
-            clearInterval(this.sessionCheckInterval);
-        }
-
+        if (this.sessionCheckInterval) clearInterval(this.sessionCheckInterval);
         this.sessionCheckInterval = setInterval(async () => {
-            const isValid = await this.isSessionValid();
-            if (!isValid) {
-                logger.warn('[AUTH] Sessão expirou, reconectando...');
-                await this.authenticate();
+            const valid = await this.isSessionValid();
+            if (!valid) {
+                logger.warn('Session invalid, will re-authenticate on next request');
+                this.session = null;
             }
-        }, 5 * 60 * 1000); // 5 minutos
+        }, this.sessionLifetime);
     }
 
-    /**
-     * Obter informações do sistema
-     * POST /system_information.fcgi
-     */
     async getDeviceInfo() {
         await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/system_information.fcgi?session=${this.session}`
-        );
-        return response.data;
+        try {
+            const url = `${this.baseUrl}/system_information.fcgi?session=${this.session}`;
+            const resp = await axios.post(url, {}, { timeout: 10000 });
+            return resp.data;
+        } catch (error) {
+            logger.error('getDeviceInfo failed:', error.message);
+            throw error;
+        }
     }
 
-    /**
-     * Carregar objetos (usuários, logs, etc)
-     * POST /load_objects.fcgi
-     */
+    async configureMonitor(serverIp, serverPort, path = '') {
+        await this.ensureAuthenticated();
+        try {
+            const ip = serverIp || config.server.ip || require('ip').address();
+            const port = serverPort || config.server.port;
+            const pushAddress = `http://${ip}:${port}${path}`;
+            
+            const url = `${this.baseUrl}/set_configuration.fcgi?session=${this.session}`;
+            const payload = {
+                push_server: {
+                    push_request_timeout: config.push.requestTimeout,
+                    push_request_period: config.push.requestPeriod,
+                    push_remote_address: pushAddress
+                }
+            };
+            
+            logger.info(`Setting push to: ${pushAddress}`);
+            const resp = await axios.post(url, payload, { timeout: 10000 });
+            logger.info('set push success:', resp.data);
+            return resp.data;
+        } catch (error) {
+            logger.error('Error performing set push:', error.message);
+            throw error;
+        }
+    }
+
     async loadObjects(objectType, options = {}) {
         await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/load_objects.fcgi?session=${this.session}`;
+            const payload = { object: objectType };
+            
+            if (options.where) payload.where = options.where;
+            if (options.limit) payload.limit = options.limit;
+            if (options.offset) payload.offset = options.offset;
+            
+            const resp = await axios.post(url, payload, { timeout: 10000 });
+            return resp.data;
+        } catch (error) {
+            logger.error(`loadObjects(${objectType}) failed:`, error.message);
+            throw error;
+        }
+    }
 
-        const response = await axios.post(
-            `${this.baseUrl}/load_objects.fcgi?session=${this.session}`,
-            {
+    async createObjects(objectType, values) {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/create_objects.fcgi?session=${this.session}`;
+            const valuesArray = Array.isArray(values) ? values : [values];
+            const payload = { object: objectType, values: valuesArray };
+            
+            logger.info(`Creating ${objectType}`, payload);
+            const resp = await axios.post(url, payload, { timeout: 10000 });
+            return resp.data;
+        } catch (error) {
+            logger.error(`createObjects(${objectType}) failed:`, error.message);
+            throw error;
+        }
+    }
+
+    async modifyObjects(objectType, id, values) {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/modify_objects.fcgi?session=${this.session}`;
+            const payload = {
                 object: objectType,
-                ...options
+                values: { ...values },
+                where: { [objectType]: { id: Number(id) } }
+            };
+            
+            logger.info(`Modifying ${objectType}`, payload);
+            const resp = await axios.post(url, payload, { timeout: 10000 });
+            return resp.data;
+        } catch (error) {
+            logger.error(`modifyObjects(${objectType}) failed:`, error.message);
+            throw error;
+        }
+    }
+
+    async destroyObjects(objectType, id) {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/destroy_objects.fcgi?session=${this.session}`;
+            const payload = {
+                object: objectType,
+                where: { [objectType]: { id: Number(id) } }
+            };
+            
+            logger.info(`Destroying ${objectType} id=${id}`);
+            const resp = await axios.post(url, payload, { timeout: 10000 });
+            return resp.data;
+        } catch (error) {
+            logger.error(`destroyObjects(${objectType}) failed:`, error.message);
+            throw error;
+        }
+    }
+
+    async remoteAction(action = 'open', door = 1) {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/execute_actions.fcgi?session=${this.session}`;
+            
+            let parameters;
+            switch (action) {
+                case 'open':
+                    parameters = `door=${door}`;
+                    break;
+                case 'close':
+                    parameters = `door=${door},close=1`;
+                    break;
+                case 'hold_open':
+                    parameters = `door=${door},hold=1`;
+                    break;
+                case 'release':
+                    parameters = `door=${door},release=1`;
+                    break;
+                default:
+                    parameters = `door=${door}`;
             }
-        );
-        return response.data;
+
+            const payload = { actions: [{ action: 'door', parameters }] };
+            
+            logger.info(`Remote action: ${action}`, payload);
+            const resp = await axios.post(url, payload, { timeout: 10000 });
+            return resp.data;
+        } catch (error) {
+            logger.error(`remoteAction(${action}) failed:`, error.message);
+            throw error;
+        }
     }
 
-    /**
-     * Listar usuários cadastrados
-     */
-    async getUsers() {
-        return this.loadObjects('users');
+    // Métodos auxiliares
+    async getUsers(options = {}) {
+        return this.loadObjects('users', options);
     }
 
-    /**
-     * Listar logs de acesso
-     */
     async getAccessLogs(limit = 100) {
         return this.loadObjects('access_logs', { limit });
     }
 
-    /**
-     * Criar objetos (usuários, etc)
-     * POST /create_objects.fcgi
-     */
-    async createObjects(objectType, values) {
-        await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/create_objects.fcgi?session=${this.session}`,
-            {
-                object: objectType,
-                values: Array.isArray(values) ? values : [values]
+    async getUserById(userId) {
+        try {
+            const result = await this.loadObjects('users', {
+                where: [{ object: 'users', field: 'id', value: Number(userId) }]
+            });
+            
+            if (result.users && result.users.length > 0) {
+                const user = result.users[0];
+                return {
+                    id: user.id,
+                    name: user.name,
+                    registration: user.registration,
+                    password: user.password
+                };
             }
-        );
-        
-        return response.data;
+            
+            logger.warn(`Usuário com ID ${userId} não encontrado no dispositivo`);
+            return null;
+        } catch (error) {
+            logger.error(`Erro ao buscar usuário ${userId}: ${error.message}`);
+            throw error;
+        }
     }
 
-    /**
-     * Cadastrar novo usuário
-     */
     async createUser(userId, userName, registration = null) {
-        const user = {
-            id: userId,
-            name: userName,
-            registration: registration || String(userId)
-        };
-
-        const result = await this.createObjects('users', user);
-        logger.info(`[USER] ✅ Usuário criado: ${userName} (ID: ${userId})`);
-        return result;
+        return this.createObjects('users', [{ id: userId, name: userName, registration }]);
     }
 
-    /**
-     * Modificar objetos
-     * POST /modify_objects.fcgi
-     */
-    async modifyObjects(objectType, values, where = {}) {
-        await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/modify_objects.fcgi?session=${this.session}`,
-            {
-                object: objectType,
-                values,
-                where
-            }
-        );
-        
-        return response.data;
+    async updateUser(id, values) {
+        return this.modifyObjects('users', id, values);
     }
 
-    /**
-     * Destruir objetos
-     * POST /destroy_objects.fcgi
-     */
-    async destroyObjects(objectType, where) {
-        await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/destroy_objects.fcgi?session=${this.session}`,
-            {
-                object: objectType,
-                where
-            }
-        );
-        
-        return response.data;
-    }
-
-    /**
-     * Captura de imagem da câmera
-     * POST /capture_camera.fcgi
-     */
-    async captureCamera() {
-        await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/capture_camera.fcgi?session=${this.session}`,
-            {},
-            { responseType: 'arraybuffer' }
-        );
-        
-        return response.data;
-    }
-
-    /**
-     * Obter configurações
-     * POST /get_configuration.fcgi
-     */
-    async getConfiguration() {
-        await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/get_configuration.fcgi?session=${this.session}`
-        );
-        return response.data;
-    }
-
-    /**
-     * Definir configurações
-     * POST /set_configuration.fcgi
-     */
-    async setConfiguration(config) {
-        await this.ensureAuthenticated();
-
-        const response = await axios.post(
-            `${this.baseUrl}/set_configuration.fcgi?session=${this.session}`,
-            config
-        );
-        return response.data;
-    }
-
-    /**
-     * Configurar modo monitor
-     */
-    async configureMonitor(serverIp, serverPort = 3001, path = '') {
-        const config = {
-            monitor: {
-                hostname: serverIp,
-                port: serverPort,
-                path: path,
-                timeout: 5000
-            }
-        };
-
-        const result = await this.setConfiguration(config);
-        logger.info(`[CONFIG] Monitor configurado: ${serverIp}:${serverPort}${path}`);
-        return result;
+    async deleteUser(id) {
+        return this.destroyObjects('users', id);
     }
 }
 
