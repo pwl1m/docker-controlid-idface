@@ -2,14 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const routes = require('./routes');
 const logger = require('./utils/logger');
+const config = require('./config');
 const idFaceService = require('./services/idface.service');
+const PushController = require('./controllers/push.controller');
+const pushController = new PushController();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Configuração para ocultar logs repetitivos
-const SHOW_HEARTBEAT_LOGS = false;
-const SHOW_POLLING_LOGS = false;
 
 // Log de requisições (exceto heartbeat e polling)
 app.use((req, res, next) => {
@@ -17,8 +15,8 @@ app.use((req, res, next) => {
     const isPolling = req.url.startsWith('/push') && req.method === 'GET';
     const isNotificationsPolling = req.path === '/api/notifications' && req.method === 'GET';
     
-    if (isHeartbeat && !SHOW_HEARTBEAT_LOGS) return next();
-    if ((isPolling || isNotificationsPolling) && !SHOW_POLLING_LOGS) return next();
+    if (isHeartbeat && !config.logs.showHeartbeat) return next();
+    if ((isPolling || isNotificationsPolling) && !config.logs.showPolling) return next();
     
     logger.info(`${req.method} ${req.url} - IP: ${req.ip}`);
     next();
@@ -32,53 +30,123 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ============ ENDPOINTS DO DISPOSITIVO (ANTES das rotas da API) ============
+// ============ ENDPOINTS DO DISPOSITIVO ============
 
-// Heartbeat
 app.post('/device_is_alive.fcgi', (req, res) => {
-    if (SHOW_HEARTBEAT_LOGS) {
-        logger.debug(`[HEARTBEAT] Device ID: ${req.query.device_id}`);
-    }
-    res.json({});
+    if (config.logs.showHeartbeat) logger.info('Heartbeat received');
+    res.json({ alive: true });
 });
 
-// Polling Push - GET /push
 app.get('/push', (req, res) => {
-    if (SHOW_POLLING_LOGS) {
-        logger.debug(`[POLLING] Device: ${req.query.deviceId}, UUID: ${req.query.uuid}`);
-    }
-    res.json([]);
+    if (config.logs.showPolling) logger.debug('Push polling from device:', req.query.deviceId);
+    pushController.getCommand(req, res);
 });
 
-// Polling - GET /api/notifications
+app.post('/result', (req, res) => {
+    logger.info('Push result received from device:', req.query.deviceId);
+    pushController.postResult(req, res);
+});
+
 app.get('/api/notifications', (req, res) => {
-    if (SHOW_POLLING_LOGS) {
-        logger.debug(`[POLLING] Device: ${req.query.deviceId}`);
-    }
+    if (config.logs.showPolling) logger.debug(`[POLLING] Device: ${req.query.deviceId}`);
     res.json([]);
 });
 
-// Operation mode
 app.post('/api/notifications/operation_mode', (req, res) => {
     const event = req.body;
     logger.info(`[MODE] ${event.operation_mode?.mode_name || 'N/A'} - Device: ${event.device_id || 'N/A'}`);
     res.json({});
 });
 
-// DAO
-app.post('/api/notifications/dao', (req, res) => {
+app.post('/api/notifications/dao', async (req, res) => {
     const data = req.body;
-    logger.info(`[DAO] Objeto: ${data.object || 'N/A'}, Verb: ${data.verb || 'N/A'}`);
+    
+    // Log detalhado do DAO
+    logger.info('==========================================');
+    logger.info('📦 DAO - Data Access Object');
+    logger.info('==========================================');
+    
+    // Processar mudanças de objetos
+    if (data.object_changes && Array.isArray(data.object_changes)) {
+        for (const change of data.object_changes) {
+            if (change.object === 'access_logs' && change.type === 'inserted') {
+                const accessLog = change.values;
+                const userId = parseInt(accessLog.user_id);
+                const eventId = parseInt(accessLog.event);
+                const horario = new Date(parseInt(accessLog.time) * 1000).toLocaleString('pt-BR');
+                
+                // Buscar informações do usuário
+                try {
+                    const userInfo = await idFaceService.getUserById(userId);
+                    
+                    logger.info('==========================================');
+                    logger.info('🎯 ACESSO REGISTRADO!');
+                    logger.info('==========================================');
+                    logger.info(`👤 Nome: ${userInfo?.name || 'N/A'}`);
+                    logger.info(`🆔 User ID: ${userId}`);
+                    logger.info(`🔑 Identifier ID: ${accessLog.identifier_id}`);
+                    logger.info(`📋 Matrícula: ${userInfo?.registration || 'N/A'}`);
+                    logger.info(`📊 Confiança: ${accessLog.confidence}`);
+                    logger.info(`😷 Máscara: ${accessLog.mask === '1' ? 'SIM' : 'NÃO'}`);
+                    logger.info(`🚪 Portal: ${accessLog.portal_id}`);
+                    logger.info(`📅 Event ID: ${eventId}`);
+                    logger.info(`⏰ Horário: ${horario}`);
+                    logger.info('==========================================');
+                } catch (error) {
+                    logger.warn('==========================================');
+                    logger.warn('⚠️ ACESSO DETECTADO - Erro ao buscar usuário');
+                    logger.warn(`🆔 User ID: ${userId}`);
+                    logger.warn(`📊 Confiança: ${accessLog.confidence}`);
+                    logger.warn(`⏰ Horário: ${horario}`);
+                    logger.warn(`❌ Erro: ${error.message}`);
+                    logger.warn('==========================================');
+                }
+            }
+        }
+    }
+    
+    logger.info('Payload completo:', JSON.stringify(data, null, 2));
+    logger.info('==========================================');
+    
     res.json({});
 });
 
-// SecBox
 app.post('/api/notifications/secbox', (req, res) => {
-    logger.info(`[SECBOX] Evento recebido`);
+    const data = req.body;
+    
+    // Log detalhado do SECBOX
+    logger.info('==========================================');
+    logger.info('🔒 SECBOX - Evento de Segurança');
+    logger.info('==========================================');
+    logger.info('Payload completo:', JSON.stringify(data, null, 2));
+    logger.info('==========================================');
+    
+    res.json({});
+});
+
+// Adicione também handler para device_is_alive no caminho correto
+app.post('/api/notifications/device_is_alive', (req, res) => {
+    const data = req.body;
+    
+    if (config.logs.showHeartbeat) {
+        logger.info('💓 Heartbeat via notifications');
+        logger.info(`Access logs: ${data.access_logs}`);
+    }
+    
     res.json({});
 });
 
 // ============ MODO MONITOR ============
+
+// ADICIONE ESTE BLOCO ANTES DOS HANDLERS
+app.post('/api/notifications/*', (req, res, next) => {
+    logger.info('==========================================');
+    logger.info(`🔍 EVENTO CAPTURADO: ${req.path}`);
+    logger.info('==========================================');
+    logger.info('Body completo:', JSON.stringify(req.body, null, 2));
+    logger.info('==========================================');
+    next();
+});
 
 function handleUserIdentified(req, res) {
     const event = req.body;
@@ -110,7 +178,6 @@ function handleUserIdentified(req, res) {
     
     console.log('');
     
-    // Resposta COM o campo 'result' que o dispositivo espera
     res.setHeader('Content-Type', 'application/json');
     res.status(200).json({
         result: {
@@ -145,22 +212,12 @@ function handleUserNotIdentified(req, res) {
     });
 }
 
-// Novo endpoint para receber resultados (se necessário)
-app.post('/result', (req, res) => {
-    logger.info('[RESULT] recebido:', JSON.stringify(req.body));
-    // Retornar 'result' vazio para aceitar
-    res.status(200).json({ result: {} });
-});
-
-// Monitor na raiz
 app.post('/new_user_identified.fcgi', handleUserIdentified);
 app.post('/user_not_identified.fcgi', handleUserNotIdentified);
-
-// Monitor com path /api/notifications
 app.post('/api/notifications/new_user_identified.fcgi', handleUserIdentified);
 app.post('/api/notifications/user_not_identified.fcgi', handleUserNotIdentified);
 
-// ============ Rotas da API interna (DEPOIS dos endpoints do dispositivo) ============
+// ============ Rotas da API interna ============
 app.use('/api', routes);
 
 // ============ Catch-all para debug ============
@@ -177,6 +234,8 @@ async function startServer() {
         logger.info('==========================================');
         logger.info('🚀 Iniciando servidor IDFace Integration');
         logger.info('==========================================');
+        logger.info(`📋 Dispositivo: ${config.device.ip}`);
+        logger.info(`📋 Porta: ${config.server.port}`);
         
         await idFaceService.authenticate();
         
@@ -185,16 +244,16 @@ async function startServer() {
         logger.info(`🔢 Serial: ${deviceInfo.serial}`);
         logger.info(`📡 Firmware: ${deviceInfo.version}`);
         
-        // Armazenar sessão globalmente para uso nos endpoints
         app.locals.deviceSession = idFaceService.session;
         logger.info(`🔑 Sessão ativa: ${idFaceService.session}`);
         
-        app.listen(PORT, '0.0.0.0', () => {
+        app.listen(config.server.port, '0.0.0.0', () => {
             console.log('');
             logger.info('==========================================');
-            logger.info(`✅ Servidor rodando na porta ${PORT}`);
-            logger.info(`🔇 Heartbeat logs: ${SHOW_HEARTBEAT_LOGS ? 'ON' : 'OFF'}`);
-            logger.info(`🔇 Polling logs: ${SHOW_POLLING_LOGS ? 'ON' : 'OFF'}`);
+            logger.info(`✅ Servidor rodando na porta ${config.server.port}`);
+            logger.info(`🔇 Heartbeat logs: ${config.logs.showHeartbeat ? 'ON' : 'OFF'}`);
+            logger.info(`🔇 Polling logs: ${config.logs.showPolling ? 'ON' : 'OFF'}`);
+            logger.info(`🔐 API Key: ${config.auth.apiKey ? 'ATIVA' : 'DESABILITADA'}`);
             logger.info('==========================================');
             console.log('');
         });
@@ -202,8 +261,8 @@ async function startServer() {
     } catch (error) {
         logger.error(`❌ Erro ao iniciar: ${error.message}`);
         
-        app.listen(PORT, '0.0.0.0', () => {
-            logger.info(`Servidor rodando na porta ${PORT} (modo offline)`);
+        app.listen(config.server.port, '0.0.0.0', () => {
+            logger.info(`Servidor rodando na porta ${config.server.port} (modo offline)`);
         });
     }
 }

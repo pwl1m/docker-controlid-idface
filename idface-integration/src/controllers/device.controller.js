@@ -36,8 +36,8 @@ class DeviceController {
 
     async configurePush(req, res) {
         try {
-            const { serverUrl } = req.body;
-            const result = await this.idFaceService.configurePushServer(serverUrl);
+            const { serverIp, serverPort = 3001, path = '' } = req.body;
+            const result = await this.idFaceService.configureMonitor(serverIp, serverPort, path);
             res.json(result);
         } catch (error) {
             res.status(500).json({ error: error.message });
