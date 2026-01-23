@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>IDFace - Teste UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { margin-bottom: 8px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .block { border: 1px solid #ddd; padding: 12px; margin: 10px 0; border-radius: 6px; }
+    .block h3 { margin: 0 0 8px 0; }
+    .block textarea { width: 100%; min-height: 90px; }
+    .block input[type="text"] { width: 420px; }
+    .block select { min-width: 110px; }
+    .muted { color: #666; font-size: 12px; }
+    .output { white-space: pre-wrap; background: #f7f7f7; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>IDFace - Teste UI (Único)</h1>
+  <p class="muted">Base URL é opcional. Ex.: <code>http://localhost:3000</code></p>
+  <div class="row">
+    <label>Base URL:</label>
+    <input id="baseUrl" type="text" placeholder="http://localhost:3000" />
+  </div>
+
+  <h2>Objetos (create/load/update/delete)</h2>
+
+  <div class="block">
+    <h3>Users</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+      </select>
+      <input class="path" type="text" value="/users" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "name": "Usuario Teste", "registration": "123" }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Groups</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/groups" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "name": "Departamento A" }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>User Groups</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/user-groups" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "user_id": 1, "group_id": 1 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Access Rules</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/access-rules" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "name": "Regra 1", "type": 0 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Group Access Rules</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/group-access-rules" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "group_id": 1, "access_rule_id": 1 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>User Access Rules</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/user-access-rules" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "user_id": 1, "access_rule_id": 1 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Scheduled Unlocks</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/scheduled-unlocks" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "name": "Liberacao Agendada" }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Scheduled Unlock Access Rules</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/scheduled-unlock-access-rules" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "scheduled_unlock_id": 1, "access_rule_id": 1 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Time Zones</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/time-zones" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "name": "Horario A" }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Time Spans</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/time-spans" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "time_zone_id": 1, "day": 1, "start": 28800, "end": 61200 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Access Rule Time Zones</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/access-rule-time-zones" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "access_rule_id": 1, "time_zone_id": 1 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Holidays</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input class="path" type="text" value="/holidays" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "values": [
+    { "name": "Feriado Teste", "date": 1704067200 }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Access Logs</h3>
+    <div class="row">
+      <select class="method">
+        <option>GET</option>
+        <option>POST</option>
+      </select>
+      <input class="path" type="text" value="/access-logs" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Relatório (report_generate)</h3>
+    <div class="row">
+      <select class="method">
+        <option>POST</option>
+      </select>
+      <input class="path" type="text" value="/report-generate" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "order": ["ascending", "name"],
+  "where": { "users": {}, "time_zones": {} },
+  "object": "users",
+  "delimiter": ";",
+  "line_break": "\\r\\n"
+}</textarea>
+  </div>
+
+  <h2>Cadastro Facial</h2>
+
+  <div class="block">
+    <h3>Obter imagem do usuário</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/user-get-image?user_id=10&get_timestamp=1" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Listar usuários com imagem</h3>
+    <div class="row">
+      <select class="method"><option>GET</option></select>
+      <input class="path" type="text" value="/user-list-images?get_timestamp=1" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Obter lista de imagens</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/user-get-image-list" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "user_ids": [27, 28]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Cadastrar imagem do usuário (arquivo)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/user-set-image?user_id=10&match=1&timestamp=1624997578" />
+      <input class="file" type="file" />
+      <button onclick="sendBlock(this, true)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Cadastrar lista de imagens (base64)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/user-set-image-list" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "match": true,
+  "user_images": [
+    { "user_id": 27, "timestamp": 1624997563, "image": "/9j/4AAQSkZJRgABAQ..." }
+  ]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Testar imagem (arquivo)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/user-test-image" />
+      <input class="file" type="file" />
+      <button onclick="sendBlock(this, true)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Excluir fotos de usuários</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/user-destroy-image" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "user_ids": [27, 28]
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Captura de câmera</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/save-screenshot" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "frame_type": "camera",
+  "camera": "rgb"
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Set configuration (limit_identification_to_display_region)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/set-configuration" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "face_id": { "limit_identification_to_display_region": "1" }
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Set configuration (brightness)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/set-configuration" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "led_white": { "brightness": "100" }
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Set configuration (min_detect_bounds_width)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/set-configuration" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "face_id": { "min_detect_bounds_width": "0.29" }
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Get catra info</h3>
+    <div class="row">
+      <select class="method"><option>GET</option></select>
+      <input class="path" type="text" value="/get-catra-info" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <h2>Resposta</h2>
+  <pre id="output" class="output"></pre>
+
+  <script>
+    function buildUrl(path) {
+      const base = document.getElementById('baseUrl').value.trim();
+      if (!base) return path;
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      return base.replace(/\/$/, '') + path;
+    }
+
+    async function sendBlock(btn, isFile = false) {
+      const block = btn.closest('.block');
+      const method = block.querySelector('.method').value;
+      const path = block.querySelector('.path').value.trim();
+      const body = block.querySelector('.body')?.value ?? '';
+      const fileInput = block.querySelector('.file');
+      const url = buildUrl(path);
+
+      const headers = {};
+      let payload = undefined;
+
+      if (isFile && fileInput && fileInput.files.length) {
+        const file = fileInput.files[0];
+        payload = await file.arrayBuffer();
+        headers['Content-Type'] = file.type || 'application/octet-stream';
+      } else if (method !== 'GET') {
+        headers['Content-Type'] = 'application/json';
+        payload = body ? body : '{}';
+      }
+
+      const res = await fetch(url, { method, headers, body: payload });
+      const text = await res.text();
+      document.getElementById('output').textContent =
+        `Status: ${res.status}\n\n${text}`;
+    }
+  </script>
+</body>
+</html>
