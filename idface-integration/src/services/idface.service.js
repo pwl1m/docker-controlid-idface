@@ -136,18 +136,14 @@ class IDFaceService {
 
     async createObjects(objectType, values) {
         await this.ensureAuthenticated();
-        try {
-            const url = `${this.baseUrl}/create_objects.fcgi?session=${this.session}`;
-            const valuesArray = Array.isArray(values) ? values : [values];
-            const payload = { object: objectType, values: valuesArray };
-            
-            logger.info(`Creating ${objectType}`, payload);
-            const resp = await axios.post(url, payload, { timeout: 10000 });
-            return resp.data;
-        } catch (error) {
-            logger.error(`createObjects(${objectType}) failed:`, error.message);
-            throw error;
-        }
+        
+        const payload = {
+            object: objectType,
+            values: Array.isArray(values) ? values : [values]
+        };
+        
+        const response = await this.postFcgi('create_objects.fcgi', payload);
+        return response.data;
     }
 
     async modifyObjects(objectType, id, values) {
@@ -219,6 +215,103 @@ class IDFaceService {
             logger.error(`remoteAction(${action}) failed:`, error.message);
             throw error;
         }
+    }
+
+    buildUrl(path) {
+        const normalized = path.includes('?')
+            ? path
+            : path.includes('&')
+                ? path.replace('&', '?')
+                : path;
+        const separator = normalized.includes('?') ? '&' : '?';
+        return `${this.baseUrl}/${normalized}${separator}session=${this.session}`;
+    }
+
+    async postFcgi(path, payload = null, options = {}) {
+        await this.ensureAuthenticated();
+        try {
+            const url = this.buildUrl(path);
+            const resp = await axios.post(url, payload, {
+                timeout: 10000,
+                responseType: options.responseType || 'json',
+                headers: options.headers || {}
+            });
+            return resp;
+        } catch (error) {
+            logger.error(`postFcgi(${path}) failed:`, error.message);
+            throw error;
+        }
+    }
+
+    async getFcgi(path, options = {}) {
+        await this.ensureAuthenticated();
+        try {
+            const url = this.buildUrl(path);
+            const resp = await axios.get(url, {
+                timeout: 10000,
+                responseType: options.responseType || 'json',
+                headers: options.headers || {}
+            });
+            return resp;
+        } catch (error) {
+            logger.error(`getFcgi(${path}) failed:`, error.message);
+            throw error;
+        }
+    }
+
+    async userHashPassword(password) {
+        const resp = await this.postFcgi('user_hash_password.fcgi', { password });
+        return resp.data;
+    }
+
+    async userSetImage(userId, imageBuffer) {
+        const resp = await this.postFcgi(
+            `user_set_image.fcgi&user_id=${Number(userId)}`,
+            imageBuffer,
+            { headers: { 'Content-Type': 'application/octet-stream' } }
+        );
+        return resp.data;
+    }
+
+    async userGetImage(userId) {
+        const resp = await this.postFcgi(
+            `user_get_image.fcgi&user_id=${Number(userId)}`,
+            {},
+            { responseType: 'arraybuffer' }
+        );
+
+        const contentType = resp.headers['content-type'] || 'image/jpeg';
+        const base64 = Buffer.from(resp.data).toString('base64');
+
+        return { contentType, base64 };
+    }
+
+    async userGetImageWithTimestamp(userId, getTimestamp = 1) {
+        const resp = await this.postFcgi(
+            `user_get_image.fcgi?user_id=${Number(userId)}&get_timestamp=${Number(getTimestamp)}`,
+            {},
+            { responseType: 'arraybuffer' }
+        );
+
+        const contentType = resp.headers['content-type'] || 'image/jpeg';
+        const base64 = Buffer.from(resp.data).toString('base64');
+
+        return { contentType, base64, headers: resp.headers };
+    }
+
+    async userListImages(getTimestamp = 1) {
+        const resp = await this.getFcgi(`user_list_images.fcgi?get_timestamp=${Number(getTimestamp)}`);
+        return resp.data;
+    }
+
+    async objectAddField(payload) {
+        const resp = await this.postFcgi('object_add_field.fcgi', payload);
+        return resp.data;
+    }
+
+    async objectRemoveFields(payload) {
+        const resp = await this.postFcgi('object_remove_fields.fcgi', payload);
+        return resp.data;
     }
 
     // Métodos auxiliares

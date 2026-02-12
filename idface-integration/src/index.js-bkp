@@ -221,11 +221,6 @@ require('dotenv').config();
     // ============ Rotas da API interna ============
     app.use('/api', routes);
 
-    // Servir UI de testes (mover para **antes** do catch-all)
-    app.use('/ui', express.static(path.join(__dirname, 'public')));
-    // Garantir acesso direto a /ui
-    app.get('/ui', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teste-ui.html')));
-
     // ============ Catch-all para debug ============
     app.all('*', (req, res) => {
         logger.warn(`[NÃO MAPEADO] ${req.method} ${req.url}`);
@@ -274,3 +269,6 @@ require('dotenv').config();
     }
 
     startServer();
+
+    // Servir UI de testes
+    app.use('/ui', express.static(path.join(__dirname, 'public')));

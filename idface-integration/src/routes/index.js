@@ -1,21 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const DeviceController = require('../controllers/device.controller');
-const usersRouter = require('./users');
-const GenericController = require('../controllers/generic.controller');
-const AccessLogsController = require('../controllers/access-logs.controller');
-const AlarmLogsController = require('../controllers/alarm-logs.controller');
-const SecBoxsController = require('../controllers/sec-boxs.controller');
-const UtilsController = require('../controllers/utils.controller');
 const PushController = require('../controllers/push.controller');
+const SecBoxController = require('../controllers/sec-boxs.controller');
+const UtilsController = require('../controllers/utils.controller');
+const usersRouter = require('./users');
+const deviceTestsRouter = require('./device-tests');
+const GenericController = require('../controllers/generic.controller');
 const requireAuth = require('../middlewares/auth');
+const idFaceService = require('../services/idface.service'); // ADICIONAR
+const interfoniaRouter = require('./interfonia-sip');
+const registroRouter = require('./registro');
+const userGroupsRouter = require('./user-groups');
+const userRolesRouter = require('./user-roles');
+const reportsRouter = require('./reports');
+const objectFieldsRouter = require('./object-fields');
 
 const deviceController = new DeviceController();
-const accessLogsController = new AccessLogsController();
-const alarmLogsController = new AlarmLogsController();
-const secBoxsController = new SecBoxsController();
-const utilsController = new UtilsController();
 const pushController = new PushController();
+const secBoxsController = new SecBoxController();
+const utilsController = new UtilsController();
+
+// Controllers genéricos para logs
+const accessLogsController = new GenericController('access_logs');
+const alarmLogsController = new GenericController('alarm_logs');
+
+// Controllers genéricos adicionais
+const scheduledUnlocksController = new GenericController('scheduled_unlocks');
+const scheduledUnlockAccessRulesController = new GenericController('scheduled_unlock_access_rules');
+const accessRuleTimeZonesController = new GenericController('access_rule_time_zones');
 
 // ============ Device ============
 router.post('/login', deviceController.login.bind(deviceController));
@@ -30,6 +43,13 @@ router.get('/push/result/:uuid', requireAuth, pushController.getResult.bind(push
 
 // ============ Users ============
 router.use('/users', usersRouter);
+router.use('/device-tests', requireAuth, deviceTestsRouter);
+router.use('/interfonia-sip', requireAuth, interfoniaRouter);
+router.use('/registro', registroRouter);
+router.use('/user-groups', userGroupsRouter);
+router.use('/user-roles', userRolesRouter);
+router.use('/reports', reportsRouter);
+router.use('/object-fields', objectFieldsRouter);
 
 // ============ Access Logs (Acessos Registrados) ============
 router.get('/access-logs', accessLogsController.list.bind(accessLogsController));
@@ -138,6 +158,7 @@ const groupAccessRulesController = new GenericController('group_access_rules');
 router.get('/group-access-rules', groupAccessRulesController.list.bind(groupAccessRulesController));
 router.get('/group-access-rules/:id', groupAccessRulesController.getById.bind(groupAccessRulesController));
 router.post('/group-access-rules', requireAuth, groupAccessRulesController.create.bind(groupAccessRulesController));
+router.patch('/group-access-rules/:id', requireAuth, groupAccessRulesController.update.bind(groupAccessRulesController));
 router.delete('/group-access-rules/:id', requireAuth, groupAccessRulesController.delete.bind(groupAccessRulesController));
 
 // ============ User Access Rules (Regras -> Usuários) ============
@@ -145,27 +166,27 @@ const userAccessRulesController = new GenericController('user_access_rules');
 router.get('/user-access-rules', userAccessRulesController.list.bind(userAccessRulesController));
 router.get('/user-access-rules/:id', userAccessRulesController.getById.bind(userAccessRulesController));
 router.post('/user-access-rules', requireAuth, userAccessRulesController.create.bind(userAccessRulesController));
+router.patch('/user-access-rules/:id', requireAuth, userAccessRulesController.update.bind(userAccessRulesController));
 router.delete('/user-access-rules/:id', requireAuth, userAccessRulesController.delete.bind(userAccessRulesController));
 
-// ============ User Groups (Usuários em Grupos) ============
-const userGroupsController = new GenericController('user_groups');
-router.get('/user-groups', userGroupsController.list.bind(userGroupsController));
-router.get('/user-groups/:id', userGroupsController.getById.bind(userGroupsController));
-router.post('/user-groups', requireAuth, userGroupsController.create.bind(userGroupsController));
-router.delete('/user-groups/:id', requireAuth, userGroupsController.delete.bind(userGroupsController));
+// ============ Scheduled Unlocks ============
+router.get('/scheduled-unlocks', scheduledUnlocksController.list.bind(scheduledUnlocksController));
+router.get('/scheduled-unlocks/:id', scheduledUnlocksController.getById.bind(scheduledUnlocksController));
+router.post('/scheduled-unlocks', requireAuth, scheduledUnlocksController.create.bind(scheduledUnlocksController));
+router.patch('/scheduled-unlocks/:id', requireAuth, scheduledUnlocksController.update.bind(scheduledUnlocksController));
+router.delete('/scheduled-unlocks/:id', requireAuth, scheduledUnlocksController.delete.bind(scheduledUnlocksController));
 
-// ============ Portal Access Rules (Portal -> Regras) ============
-const portalAccessRulesController = new GenericController('portal_access_rules');
-router.get('/portal-access-rules', portalAccessRulesController.list.bind(portalAccessRulesController));
-router.get('/portal-access-rules/:id', portalAccessRulesController.getById.bind(portalAccessRulesController));
-router.post('/portal-access-rules', requireAuth, portalAccessRulesController.create.bind(portalAccessRulesController));
-router.delete('/portal-access-rules/:id', requireAuth, portalAccessRulesController.delete.bind(portalAccessRulesController));
+router.get('/scheduled-unlock-access-rules', scheduledUnlockAccessRulesController.list.bind(scheduledUnlockAccessRulesController));
+router.get('/scheduled-unlock-access-rules/:id', scheduledUnlockAccessRulesController.getById.bind(scheduledUnlockAccessRulesController));
+router.post('/scheduled-unlock-access-rules', requireAuth, scheduledUnlockAccessRulesController.create.bind(scheduledUnlockAccessRulesController));
+router.patch('/scheduled-unlock-access-rules/:id', requireAuth, scheduledUnlockAccessRulesController.update.bind(scheduledUnlockAccessRulesController));
+router.delete('/scheduled-unlock-access-rules/:id', requireAuth, scheduledUnlockAccessRulesController.delete.bind(scheduledUnlockAccessRulesController));
 
-// ============ Access Rule Time Zones (Regras -> Horários) ============
-const accessRuleTimeZonesController = new GenericController('access_rule_time_zones');
 router.get('/access-rule-time-zones', accessRuleTimeZonesController.list.bind(accessRuleTimeZonesController));
 router.get('/access-rule-time-zones/:id', accessRuleTimeZonesController.getById.bind(accessRuleTimeZonesController));
 router.post('/access-rule-time-zones', requireAuth, accessRuleTimeZonesController.create.bind(accessRuleTimeZonesController));
+router.patch('/access-rule-time-zones/:id', requireAuth, accessRuleTimeZonesController.update.bind(accessRuleTimeZonesController));
 router.delete('/access-rule-time-zones/:id', requireAuth, accessRuleTimeZonesController.delete.bind(accessRuleTimeZonesController));
+
 
 module.exports = router;
