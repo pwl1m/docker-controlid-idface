@@ -1,12 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const DeviceController = require('../controllers/device.controller');
+const PushController = require('../controllers/push.controller');
+const SecBoxController = require('../controllers/sec-boxs.controller');
+const UtilsController = require('../controllers/utils.controller');
 const usersRouter = require('./users');
 const deviceTestsRouter = require('./device-tests');
 const GenericController = require('../controllers/generic.controller');
 const requireAuth = require('../middlewares/auth');
+const idFaceService = require('../services/idface.service'); // ADICIONAR
+const interfoniaRouter = require('./interfonia-sip');
+const registroRouter = require('./registro');
+const userGroupsRouter = require('./user-groups');
+const userRolesRouter = require('./user-roles');
+const reportsRouter = require('./reports');
+const objectFieldsRouter = require('./object-fields');
 
 const deviceController = new DeviceController();
+const pushController = new PushController();
+const secBoxsController = new SecBoxController();
+const utilsController = new UtilsController();
+
+// Controllers genéricos para logs
+const accessLogsController = new GenericController('access_logs');
+const alarmLogsController = new GenericController('alarm_logs');
 
 // Controllers genéricos adicionais
 const scheduledUnlocksController = new GenericController('scheduled_unlocks');
@@ -27,6 +44,12 @@ router.get('/push/result/:uuid', requireAuth, pushController.getResult.bind(push
 // ============ Users ============
 router.use('/users', usersRouter);
 router.use('/device-tests', requireAuth, deviceTestsRouter);
+router.use('/interfonia-sip', requireAuth, interfoniaRouter);
+router.use('/registro', registroRouter);
+router.use('/user-groups', userGroupsRouter);
+router.use('/user-roles', userRolesRouter);
+router.use('/reports', reportsRouter);
+router.use('/object-fields', objectFieldsRouter);
 
 // ============ Access Logs (Acessos Registrados) ============
 router.get('/access-logs', accessLogsController.list.bind(accessLogsController));

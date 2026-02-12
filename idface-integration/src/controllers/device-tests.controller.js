@@ -122,6 +122,22 @@ class DeviceTestsController {
         }
     }
 
+    async getUserImage(req, res) {
+        try {
+            const userId = Number(req.params.id);
+            const result = await idFaceService.userGetImage(userId);
+            
+            // Retorna imagem como base64
+            res.json({
+                user_id: userId,
+                content_type: result.contentType,
+                image: result.base64
+            });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     async userGetImage(req, res) {
         try {
             const userId = req.query.user_id || req.body?.user_id;

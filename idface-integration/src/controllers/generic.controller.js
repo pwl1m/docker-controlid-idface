@@ -15,9 +15,7 @@ class GenericController {
 
             const where = [];
             for (const [key, value] of Object.entries(filters)) {
-                if (!['limit', 'offset', 'export'].includes(key)) {
-                    where.push({ object: this.objectType, field: key, value });
-                }
+                where.push({ object: this.objectType, field: key, value });
             }
             if (where.length) options.where = where;
 
@@ -34,7 +32,11 @@ class GenericController {
             const result = await idFaceService.loadObjects(this.objectType, {
                 where: [{ object: this.objectType, field: 'id', value: id }]
             });
-            res.json(result);
+            const items = result[this.objectType] || [];
+            if (!items.length) {
+                return res.status(404).json({ error: 'Not found' });
+            }
+            res.json(items[0]);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
@@ -42,7 +44,12 @@ class GenericController {
 
     async create(req, res) {
         try {
-            const values = req.body;
+            // Aceita tanto { values: [...] } quanto array direto ou objeto único
+            let values = req.body.values || req.body;
+            if (!Array.isArray(values)) {
+                values = [values];
+            }
+            
             const result = await idFaceService.createObjects(this.objectType, values);
             res.status(201).json(result);
         } catch (error) {
@@ -53,7 +60,9 @@ class GenericController {
     async update(req, res) {
         try {
             const id = Number(req.params.id);
-            const values = req.body;
+            // Remove 'values' wrapper se existir
+            const values = req.body.values ? req.body.values[0] : req.body;
+            
             const result = await idFaceService.modifyObjects(this.objectType, id, values);
             res.json(result);
         } catch (error) {

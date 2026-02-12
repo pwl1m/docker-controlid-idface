@@ -136,18 +136,14 @@ class IDFaceService {
 
     async createObjects(objectType, values) {
         await this.ensureAuthenticated();
-        try {
-            const url = `${this.baseUrl}/create_objects.fcgi?session=${this.session}`;
-            const valuesArray = Array.isArray(values) ? values : [values];
-            const payload = { object: objectType, values: valuesArray };
-            
-            logger.info(`Creating ${objectType}`, payload);
-            const resp = await axios.post(url, payload, { timeout: 10000 });
-            return resp.data;
-        } catch (error) {
-            logger.error(`createObjects(${objectType}) failed:`, error.message);
-            throw error;
-        }
+        
+        const payload = {
+            object: objectType,
+            values: Array.isArray(values) ? values : [values]
+        };
+        
+        const response = await this.postFcgi('create_objects.fcgi', payload);
+        return response.data;
     }
 
     async modifyObjects(objectType, id, values) {

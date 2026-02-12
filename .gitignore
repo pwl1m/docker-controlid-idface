@@ -3,3 +3,6 @@
 /logs/
 /docs/
 *.env
+*.jpeg
+*.csv
+*.sh
