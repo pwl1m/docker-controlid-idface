@@ -1,6 +1,27 @@
 const idFaceService = require('../services/idface.service');
 
 class InterfoniaController {
+    async getConfig(req, res) {
+        try {
+            const data = await idFaceService.postFcgi('get_configuration.fcgi', {
+                general: ['push_server'],
+                pjsip: [
+                    'enabled', 'server_ip', 'server_port', 'branch',
+                    'login', 'password',
+                    'auto_answer_enabled', 'auto_answer_delay',
+                    'dialing_display_mode', 'auto_call_target',
+                    'auto_call_button_enabled', 'rex_enabled',
+                    'video_enabled', 'max_call_time',
+                    'reg_status_query_period',
+                    'custom_ringtone_enabled'
+                ]
+            });
+            res.json(data.data);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     async setConfig(req, res) {
         try {
             if (!req.body?.pjsip) {

@@ -412,6 +412,177 @@
     <textarea class="body"></textarea>
   </div>
 
+  <h2>Interfonia SIP</h2>
+
+  <div class="block">
+    <h3>Obter Configuração SIP</h3>
+    <div class="row">
+      <select class="method"><option>GET</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/config" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Definir Configuração SIP</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/config" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "pjsip": {
+    "enabled": "1",
+    "server_ip": "sip.exemplo.com",
+    "server_port": "5060",
+    "branch": "1000",
+    "login": "1000",
+    "password": "senhasip",
+    "auto_answer_enabled": "0",
+    "auto_answer_delay": "3",
+    "dialing_display_mode": "dial_pad",
+    "auto_call_target": "",
+    "video_enabled": "0",
+    "max_call_time": "60",
+    "rex_enabled": "0"
+  }
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Fazer Chamada SIP</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/call" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "target": "1001"
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Finalizar Chamada SIP</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/call/finalize" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Status SIP</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/call/status" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Upload Áudio SIP (arquivo .wav)</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/audio" />
+      <input class="file" type="file" accept=".wav,audio/*" />
+      <button onclick="sendBlock(this, true)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Obter Áudio SIP</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/audio/get" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Verificar Áudio SIP</h3>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/interfonia-sip/audio/exists" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{}</textarea>
+  </div>
+
+  <h2>Custódia (Simples e Dupla)</h2>
+
+  <div class="block">
+    <h3>Obter Config de Identificação/Custódia</h3>
+    <p class="muted">Lê face_id, catra e pjsip — mostra modo atual (1:N, 1:1, dupla custódia)</p>
+    <div class="row">
+      <select class="method"><option>GET</option></select>
+      <input class="path" type="text" value="/api/custody/config" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body"></textarea>
+  </div>
+
+  <div class="block">
+    <h3>Setup: Simples Custódia (PIN + Face 1:1)</h3>
+    <p class="muted">Configura device para modo verify (1:1) com multi_factor = face+PIN</p>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/custody/setup/simple" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "access_rule_name": "Custódia Simples - PIN + Face",
+  "min_score": "0.83",
+  "identification_timeout": "30"
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Setup: Dupla Custódia (PIN + Face + SIP + DTMF)</h3>
+    <p class="muted">Após PIN+Face, device liga para SOC. Operador abre porta via DTMF.</p>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/custody/setup/dual" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "sip_target": "503",
+  "open_door_command": "#1234",
+  "video_enabled": "1",
+  "max_call_time": "120",
+  "min_score": "0.83",
+  "access_rule_name": "Dupla Custódia - SOC"
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Teste/Validação do Fluxo</h3>
+    <p class="muted">Verifica se todas as configs estão corretas (checklist pass/fail)</p>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/custody/test" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{
+  "sip_target": "503"
+}</textarea>
+  </div>
+
+  <div class="block">
+    <h3>Reset: Voltar ao Modo Padrão (1:N face-only)</h3>
+    <p class="muted">Restaura tudo: 1:N, sem PIN, sem dupla custódia, sem auto-call</p>
+    <div class="row">
+      <select class="method"><option>POST</option></select>
+      <input class="path" type="text" value="/api/custody/setup/reset" />
+      <button onclick="sendBlock(this)">Enviar</button>
+    </div>
+    <textarea class="body">{}</textarea>
+  </div>
+
   <h2>Device Info</h2>
 
   <div class="block">
