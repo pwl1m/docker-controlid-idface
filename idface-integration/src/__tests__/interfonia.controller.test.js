@@ -2,47 +2,51 @@ const axios = require('axios');
 jest.mock('axios');
 
 const idFaceService = require('../services/idface.service');
+const InterfoniaController = require('../controllers/interfonia.controller');
 
 describe('InterfoniaController - SIP Intercom', () => {
+    let controller;
+    let req;
+    let res;
+
     beforeEach(() => {
         jest.resetAllMocks();
-        idFaceService.session = 'test-session';
+        controller = new InterfoniaController();
+        req = { body: {} };
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn()
+        };
     });
 
     // ============ GET CONFIG ============
     describe('getConfig (get_configuration.fcgi)', () => {
-        test('returns SIP configuration with pjsip fields', async () => {
-            const mockData = {
-                pjsip: {
-                    enabled: '1',
-                    server_ip: 'sip.example.com',
-                    server_port: '5060',
-                    branch: '1000',
-                    login: '1000',
-                    auto_answer_enabled: '0',
-                    auto_answer_delay: '3',
-                    dialing_display_mode: 'dial_pad',
-                    auto_call_target: '',
-                    video_enabled: '0',
-                    max_call_time: '60',
-                    rex_enabled: '0'
-                }
-            };
+        test('returns 200 with SIP config', async () => {
+            jest.spyOn(idFaceService, 'getInterfoniaSipConfig')
+                .mockResolvedValueOnce({ pjsip: { enabled: '1', server_ip: 'sip.local' } });
 
-            axios.post.mockResolvedValueOnce({ data: mockData });
+            await controller.getConfig(req, res);
 
-            const result = await idFaceService.postFcgi('get_configuration.fcgi', {
-                pjsip: ['enabled', 'server_ip', 'server_port', 'branch', 'login']
+            expect(idFaceService.getInterfoniaSipConfig).toHaveBeenCalledTimes(1);
+            expect(res.json).toHaveBeenCalledWith({ pjsip: { enabled: '1', server_ip: 'sip.local' } });
+            expect(res.status).not.toHaveBeenCalled();
+        });
+
+        test('returns device status code when service throws mapped error', async () => {
+            jest.spyOn(idFaceService, 'getInterfoniaSipConfig')
+                .mockRejectedValueOnce({
+                    status: 400,
+                    message: 'invalid payload',
+                    details: { error: 'invalid payload' }
+                });
+
+            await controller.getConfig(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                error: 'invalid payload',
+                details: { error: 'invalid payload' }
             });
-
-            expect(result.data).toEqual(mockData);
-            expect(axios.post).toHaveBeenCalledWith(
-                expect.stringContaining('/get_configuration.fcgi'),
-                expect.objectContaining({
-                    pjsip: expect.any(Array)
-                }),
-                expect.any(Object)
-            );
         });
     });
 
