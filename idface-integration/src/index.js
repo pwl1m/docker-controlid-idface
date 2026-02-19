@@ -274,3 +274,37 @@ require('dotenv').config();
     }
 
     startServer();
+
+    // ============ CALLBACKS DE ENROLLMENT DO DEVICE ============
+// Estes endpoints são chamados PELO DEVICE quando enrollment async termina
+
+app.post('/face_create.fcgi', (req, res) => {
+    logger.info('[DEVICE CALLBACK] face_create.fcgi recebido');
+    // Redirecionar para o controller
+    req.url = '/api/enrollment/callback/face';
+    app._router.handle(req, res);
+});
+
+app.post('/card_create.fcgi', (req, res) => {
+    logger.info('[DEVICE CALLBACK] card_create.fcgi recebido');
+    req.url = '/api/enrollment/callback/card';
+    app._router.handle(req, res);
+});
+
+app.post('/fingerprint_create.fcgi', (req, res) => {
+    logger.info('[DEVICE CALLBACK] fingerprint_create.fcgi recebido');
+    req.url = '/api/enrollment/callback/fingerprint';
+    app._router.handle(req, res);
+});
+
+app.post('/pin_create.fcgi', (req, res) => {
+    logger.info('[DEVICE CALLBACK] pin_create.fcgi recebido');
+    req.url = '/api/enrollment/callback/pin';
+    app._router.handle(req, res);
+});
+
+app.post('/password_create.fcgi', (req, res) => {
+    logger.info('[DEVICE CALLBACK] password_create.fcgi recebido');
+    req.url = '/api/enrollment/callback/password';
+    app._router.handle(req, res);
+});
