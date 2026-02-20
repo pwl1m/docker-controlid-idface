@@ -10,52 +10,60 @@ describe('CustodyController - Simples e Dupla Custódia', () => {
     });
 
     describe('getIdentificationConfig', () => {
-        test('reads face_id, catra, pjsip config', async () => {
+        test('reads general, identifier, pjsip config', async () => {
             const mockConfig = {
-                face_id: {
-                    identification_mode: 'verify',
+                general: {
+                    identification_mode: '1',
                     multi_factor_authentication: '1'
                 },
-                catra: { dual_custody_enabled: '1' },
-                pjsip: { auto_call_target: '503', open_door_enabled: '1' }
+                identifier: { face_identify_enabled: '1', pin_enabled: '1' },
+                pjsip: { enabled: '1', auto_call_target: '503', open_door_enabled: '1', open_door_command: '#1234' }
             };
             axios.post.mockResolvedValueOnce({ data: mockConfig });
 
             const result = await idFaceService.postFcgi('get_configuration.fcgi', {
-                face_id: ['identification_mode', 'multi_factor_authentication'],
-                catra: ['dual_custody_enabled'],
-                pjsip: ['auto_call_target', 'open_door_enabled']
+                general: ['identification_mode', 'multi_factor_authentication'],
+                identifier: ['face_identify_enabled', 'pin_enabled'],
+                pjsip: ['enabled', 'auto_call_target', 'open_door_enabled', 'open_door_command']
             });
 
-            expect(result.data.face_id.identification_mode).toBe('verify');
-            expect(result.data.catra.dual_custody_enabled).toBe('1');
+            expect(result.data.general.identification_mode).toBe('1');
+            expect(result.data.identifier.pin_enabled).toBe('1');
             expect(result.data.pjsip.auto_call_target).toBe('503');
         });
     });
 
     describe('setupSimpleCustody', () => {
         test('configures device for 1:1 + PIN mode', async () => {
-            // Step 1: face_id config
+            // Step 1: general + identifier + face_id config
             axios.post.mockResolvedValueOnce({ data: {} });
-            // Step 2: catra config
+            // Step 2: timeout config
             axios.post.mockResolvedValueOnce({ data: {} });
             // Step 3: create access rule
             axios.post.mockResolvedValueOnce({ data: { ids: [10] } });
 
             const s1 = await idFaceService.postFcgi('set_configuration.fcgi', {
+                general: { identification_mode: 1 },
+                identifier: {
+                    face_identify_enabled: 1,
+                    pin_enabled: 1,
+                    multi_factor_authentication: 1
+                },
                 face_id: {
-                    face_id_enabled: '1',
-                    identification_mode: 'verify',
-                    multi_factor_authentication: '1'
+                    min_score: '80',
+                    anti_spoofing: 1
                 }
             });
 
             expect(axios.post).toHaveBeenCalledWith(
                 expect.stringContaining('/set_configuration.fcgi'),
                 expect.objectContaining({
-                    face_id: expect.objectContaining({
-                        identification_mode: 'verify',
-                        multi_factor_authentication: '1'
+                    general: expect.objectContaining({
+                        identification_mode: 1
+                    }),
+                    identifier: expect.objectContaining({
+                        pin_enabled: 1,
+                        multi_factor_authentication: 1
                     })
                 }),
                 expect.any(Object)
@@ -65,29 +73,27 @@ describe('CustodyController - Simples e Dupla Custódia', () => {
 
     describe('setupDualCustody', () => {
         test('configures face 1:1 + SIP auto-call + DTMF door', async () => {
-            // Step 1: face_id
+            // Step 1: general + identifier
             axios.post.mockResolvedValueOnce({ data: {} });
             // Step 2: pjsip
             axios.post.mockResolvedValueOnce({ data: {} });
-            // Step 3: catra
-            axios.post.mockResolvedValueOnce({ data: {} });
-            // Step 4: access rule
-            axios.post.mockResolvedValueOnce({ data: { ids: [20] } });
 
-            // face_id
+            // general + identifier
             await idFaceService.postFcgi('set_configuration.fcgi', {
-                face_id: { identification_mode: 'verify', multi_factor_authentication: '1' }
+                general: { identification_mode: 1 },
+                identifier: { face_identify_enabled: 1, pin_enabled: 1, multi_factor_authentication: 1 }
             });
 
             // pjsip
             const sipResult = await idFaceService.postFcgi('set_configuration.fcgi', {
                 pjsip: {
-                    enabled: '1',
-                    dialing_display_mode: '0',
+                    enabled: 1,
+                    dialing_display_mode: 0,
+                    auto_call_button_enabled: 1,
                     auto_call_target: '503',
-                    open_door_enabled: '1',
+                    open_door_enabled: 1,
                     open_door_command: '#1234',
-                    video_enabled: '1'
+                    facial_id_during_call_enabled: 1
                 }
             });
 
@@ -96,22 +102,9 @@ describe('CustodyController - Simples e Dupla Custódia', () => {
                 expect.objectContaining({
                     pjsip: expect.objectContaining({
                         auto_call_target: '503',
-                        open_door_enabled: '1',
+                        open_door_enabled: 1,
                         open_door_command: '#1234'
                     })
-                }),
-                expect.any(Object)
-            );
-
-            // catra
-            await idFaceService.postFcgi('set_configuration.fcgi', {
-                catra: { dual_custody_enabled: '1' }
-            });
-
-            expect(axios.post).toHaveBeenCalledWith(
-                expect.stringContaining('/set_configuration.fcgi'),
-                expect.objectContaining({
-                    catra: expect.objectContaining({ dual_custody_enabled: '1' })
                 }),
                 expect.any(Object)
             );
@@ -123,9 +116,9 @@ describe('CustodyController - Simples e Dupla Custódia', () => {
             // get_configuration
             axios.post.mockResolvedValueOnce({
                 data: {
-                    face_id: { face_id_enabled: '1', identification_mode: 'verify', multi_factor_authentication: '1' },
-                    catra: { dual_custody_enabled: '1' },
-                    pjsip: { enabled: '1', auto_call_target: '503', open_door_enabled: '1', video_enabled: '1' }
+                    general: { identification_mode: '1', multi_factor_authentication: '1' },
+                    identifier: { face_identify_enabled: '1', pin_enabled: '1' },
+                    pjsip: { enabled: '1', auto_call_target: '503', open_door_enabled: '1', open_door_command: '#1234' }
                 }
             });
             // get_sip_status
@@ -138,13 +131,13 @@ describe('CustodyController - Simples e Dupla Custódia', () => {
             });
 
             const cfg = await idFaceService.postFcgi('get_configuration.fcgi', {
-                face_id: ['face_id_enabled', 'identification_mode', 'multi_factor_authentication'],
-                catra: ['dual_custody_enabled'],
-                pjsip: ['enabled', 'auto_call_target', 'open_door_enabled', 'video_enabled']
+                general: ['identification_mode', 'multi_factor_authentication'],
+                identifier: ['face_identify_enabled', 'pin_enabled'],
+                pjsip: ['enabled', 'auto_call_target', 'open_door_enabled', 'open_door_command']
             });
 
-            expect(cfg.data.face_id.identification_mode).toBe('verify');
-            expect(cfg.data.catra.dual_custody_enabled).toBe('1');
+            expect(cfg.data.general.identification_mode).toBe('1');
+            expect(cfg.data.identifier.pin_enabled).toBe('1');
             expect(cfg.data.pjsip.auto_call_target).toBe('503');
 
             const status = await idFaceService.postFcgi('get_sip_status.fcgi', {});
@@ -157,20 +150,23 @@ describe('CustodyController - Simples e Dupla Custódia', () => {
 
     describe('resetToDefault', () => {
         test('restores 1:N face-only mode', async () => {
-            axios.post.mockResolvedValueOnce({ data: {} }); // face_id
-            axios.post.mockResolvedValueOnce({ data: {} }); // catra
+            axios.post.mockResolvedValueOnce({ data: {} }); // general + identifier
             axios.post.mockResolvedValueOnce({ data: {} }); // pjsip
 
             await idFaceService.postFcgi('set_configuration.fcgi', {
-                face_id: { identification_mode: 'identify', multi_factor_authentication: '0' }
+                general: { identification_mode: 0 },
+                identifier: { face_identify_enabled: 1, pin_enabled: 0, multi_factor_authentication: 0 }
             });
 
             expect(axios.post).toHaveBeenCalledWith(
                 expect.stringContaining('/set_configuration.fcgi'),
                 expect.objectContaining({
-                    face_id: expect.objectContaining({
-                        identification_mode: 'identify',
-                        multi_factor_authentication: '0'
+                    general: expect.objectContaining({
+                        identification_mode: 0
+                    }),
+                    identifier: expect.objectContaining({
+                        pin_enabled: 0,
+                        multi_factor_authentication: 0
                     })
                 }),
                 expect.any(Object)

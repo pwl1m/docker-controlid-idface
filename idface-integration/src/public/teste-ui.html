@@ -402,16 +402,6 @@
     <textarea class="body">{ "min_detect_bounds_width": "0.29" }</textarea>
   </div>
 
-  <div class="block">
-    <h3>Get Catra Info</h3>
-    <div class="row">
-      <select class="method"><option>GET</option></select>
-      <input class="path" type="text" value="/api/device-tests/face/catra-info" />
-      <button onclick="sendBlock(this)">Enviar</button>
-    </div>
-    <textarea class="body"></textarea>
-  </div>
-
   <h2>Interfonia SIP</h2>
 
   <div class="block">
@@ -517,7 +507,7 @@
 
   <div class="block">
     <h3>Obter Config de Identificação/Custódia</h3>
-    <p class="muted">Lê face_id, catra e pjsip — mostra modo atual (1:N, 1:1, dupla custódia)</p>
+    <p class="muted">Lê general, identifier e pjsip — mostra modo atual (1:N, 1:1, dupla custódia)</p>
     <div class="row">
       <select class="method"><option>GET</option></select>
       <input class="path" type="text" value="/api/custody/config" />

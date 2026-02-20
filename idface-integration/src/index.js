@@ -218,15 +218,48 @@ require('dotenv').config();
     app.post('/api/notifications/new_user_identified.fcgi', handleUserIdentified);
     app.post('/api/notifications/user_not_identified.fcgi', handleUserNotIdentified);
 
+    // ============ CALLBACKS DE ENROLLMENT DO DEVICE ============
+    // Estes endpoints são chamados PELO DEVICE quando enrollment async termina
+    // IMPORTANTE: Devem estar ANTES do catch-all para serem alcançados
+
+    app.post('/face_create.fcgi', (req, res) => {
+        logger.info('[DEVICE CALLBACK] face_create.fcgi recebido');
+        req.url = '/api/enrollment/callback/face';
+        app._router.handle(req, res);
+    });
+
+    app.post('/card_create.fcgi', (req, res) => {
+        logger.info('[DEVICE CALLBACK] card_create.fcgi recebido');
+        req.url = '/api/enrollment/callback/card';
+        app._router.handle(req, res);
+    });
+
+    app.post('/fingerprint_create.fcgi', (req, res) => {
+        logger.info('[DEVICE CALLBACK] fingerprint_create.fcgi recebido');
+        req.url = '/api/enrollment/callback/fingerprint';
+        app._router.handle(req, res);
+    });
+
+    app.post('/pin_create.fcgi', (req, res) => {
+        logger.info('[DEVICE CALLBACK] pin_create.fcgi recebido');
+        req.url = '/api/enrollment/callback/pin';
+        app._router.handle(req, res);
+    });
+
+    app.post('/password_create.fcgi', (req, res) => {
+        logger.info('[DEVICE CALLBACK] password_create.fcgi recebido');
+        req.url = '/api/enrollment/callback/password';
+        app._router.handle(req, res);
+    });
+
     // ============ Rotas da API interna ============
     app.use('/api', routes);
 
-    // Servir UI de testes (mover para **antes** do catch-all)
+    // Servir UI de testes (antes do catch-all)
     app.use('/ui', express.static(path.join(__dirname, 'public')));
-    // Garantir acesso direto a /ui
     app.get('/ui', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teste-ui.html')));
 
-    // ============ Catch-all para debug ============
+    // ============ Catch-all para debug (DEVE SER O ÚLTIMO) ============
     app.all('*', (req, res) => {
         logger.warn(`[NÃO MAPEADO] ${req.method} ${req.url}`);
         logger.warn(`Body: ${JSON.stringify(req.body)}`);
@@ -249,6 +282,14 @@ require('dotenv').config();
             logger.info(`📱 Dispositivo: ${deviceInfo.device_name}`);
             logger.info(`🔢 Serial: ${deviceInfo.serial}`);
             logger.info(`📡 Firmware: ${deviceInfo.version}`);
+
+            // Sincronizar hora do device com o servidor na inicialização
+            try {
+                await idFaceService.setSystemTime();
+                logger.info('🕐 Hora do device sincronizada com o servidor');
+            } catch (e) {
+                logger.warn('⚠️ Falha ao sincronizar hora:', e.message);
+            }
             
             app.locals.deviceSession = idFaceService.session;
             logger.info(`🔑 Sessão ativa: ${idFaceService.session}`);
@@ -274,37 +315,3 @@ require('dotenv').config();
     }
 
     startServer();
-
-    // ============ CALLBACKS DE ENROLLMENT DO DEVICE ============
-// Estes endpoints são chamados PELO DEVICE quando enrollment async termina
-
-app.post('/face_create.fcgi', (req, res) => {
-    logger.info('[DEVICE CALLBACK] face_create.fcgi recebido');
-    // Redirecionar para o controller
-    req.url = '/api/enrollment/callback/face';
-    app._router.handle(req, res);
-});
-
-app.post('/card_create.fcgi', (req, res) => {
-    logger.info('[DEVICE CALLBACK] card_create.fcgi recebido');
-    req.url = '/api/enrollment/callback/card';
-    app._router.handle(req, res);
-});
-
-app.post('/fingerprint_create.fcgi', (req, res) => {
-    logger.info('[DEVICE CALLBACK] fingerprint_create.fcgi recebido');
-    req.url = '/api/enrollment/callback/fingerprint';
-    app._router.handle(req, res);
-});
-
-app.post('/pin_create.fcgi', (req, res) => {
-    logger.info('[DEVICE CALLBACK] pin_create.fcgi recebido');
-    req.url = '/api/enrollment/callback/pin';
-    app._router.handle(req, res);
-});
-
-app.post('/password_create.fcgi', (req, res) => {
-    logger.info('[DEVICE CALLBACK] password_create.fcgi recebido');
-    req.url = '/api/enrollment/callback/password';
-    app._router.handle(req, res);
-});

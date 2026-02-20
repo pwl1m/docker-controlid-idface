@@ -11,6 +11,10 @@ router.post('/audio/get', controller.getAudio.bind(controller));
 router.post('/audio/exists', controller.hasAudio.bind(controller));
 router.post('/call', controller.makeCall.bind(controller));
 router.post('/call/finalize', controller.finalizeCall.bind(controller));
+
+// Status SIP - aceita GET e POST
+router.get('/call/status', controller.getStatus.bind(controller));
 router.post('/call/status', controller.getStatus.bind(controller));
+router.get('/status', controller.getStatus.bind(controller));  // Alias mais curto
 
 module.exports = router;

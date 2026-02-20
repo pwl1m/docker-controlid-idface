@@ -1,0 +1,15 @@
+{
+  "device": {
+    "ip": "192.168.10.62",
+    "firmware": "6.23.0",
+    "discovered_at": "2026-02-20T15:48:25-03:00"
+  },
+  "general": {"error":"Node or attribute not found. Node path: config->general->param[name=company_name]","code":1},
+  "identifier": {"error":"Node or attribute not found. Node path: config->modules->module[name=identifier]->param[name=face_verification_enabled]","code":1},
+  "face_id": {"error":"Node or attribute not found. Node path: config->modules->module[name=face_id]->param[name=enabled]","code":1},
+  "pjsip": {"pjsip":{"enabled":"1","server_ip":"sip.exemplo.com","server_port":"5060","branch":"1000","login":"1000","password":"senhasip","auto_call_enabled":"0","auto_call_target":"","video_enabled":"0","mic_volume":"7","speaker_volume":"7","peer_to_peer_enabled":"0","numeric_branch_enabled":"1","dialing_display_mode":"0"}},
+  "monitor": {"error":"Node or attribute not found. Node path: config->modules->module[name=monitor]->param[name=log_enabled]","code":1},
+  "relay": {"error":"Node or attribute not found. Node path: config->modules->module[name=relay]->param[name=time]","code":1},
+  "push_server": {"error":"Node or attribute not found. Node path: config->modules->module[name=push_server]->param[name=url]","code":1},
+  "sip_status": {"status":408,"in_call":false}
+}
