@@ -4,11 +4,11 @@ const DeviceController = require('../controllers/device.controller');
 const PushController = require('../controllers/push.controller');
 const SecBoxController = require('../controllers/sec-boxs.controller');
 const UtilsController = require('../controllers/utils.controller');
+const StatisticsController = require('../controllers/statistics.controller'); // NOVO
 const usersRouter = require('./users');
 const deviceTestsRouter = require('./device-tests');
 const GenericController = require('../controllers/generic.controller');
 const requireAuth = require('../middlewares/auth');
-const idFaceService = require('../services/idface.service'); // ADICIONAR
 const interfoniaRouter = require('./interfonia-sip');
 const registroRouter = require('./registro');
 const userGroupsRouter = require('./user-groups');
@@ -18,12 +18,15 @@ const objectFieldsRouter = require('./object-fields');
 const custodyRouter = require('./custody'); // customizado
 const enrollmentRouter = require('./enrollment');
 const sipContactsRouter = require('./sip-contacts');
+const systemRouter = require('./system');
+const exportRouter = require('./export'); // NOVO - Exportação CSV/PDF
 
 // Controllers
 const deviceController = new DeviceController();
 const pushController = new PushController();
 const secBoxsController = new SecBoxController();
 const utilsController = new UtilsController();
+const statisticsController = new StatisticsController(); // NOVO
 
 // Controllers genéricos para logs
 const accessLogsController = new GenericController('access_logs');
@@ -39,6 +42,18 @@ router.post('/login', deviceController.login.bind(deviceController));
 router.post('/recognize', deviceController.recognize.bind(deviceController));
 router.get('/device/info', deviceController.getInfo.bind(deviceController));
 router.post('/device/configure-push', deviceController.configurePush.bind(deviceController));
+
+// ============ Device Config (Configurações do Equipamento) ============
+router.get('/device/config', requireAuth, deviceController.getConfig.bind(deviceController));
+router.put('/device/config', requireAuth, deviceController.setConfig.bind(deviceController));
+router.get('/device/config/identification-timeout', requireAuth, deviceController.getIdentificationTimeout.bind(deviceController));
+router.put('/device/config/identification-timeout', requireAuth, deviceController.setIdentificationTimeout.bind(deviceController));
+
+// ============ Statistics (Estatísticas de Acesso) ============
+router.get('/statistics/access-summary', requireAuth, statisticsController.getAccessSummary.bind(statisticsController));
+router.get('/statistics/blocks', requireAuth, statisticsController.getBlocks.bind(statisticsController));
+router.get('/statistics/user/:user_id', requireAuth, statisticsController.getUserStats.bind(statisticsController));
+router.get('/statistics/events', statisticsController.getEventTypes.bind(statisticsController));
 
 // ============ Push Management (API interna) ============
 router.post('/push/enqueue', requireAuth, pushController.enqueueCommand.bind(pushController));
@@ -57,6 +72,8 @@ router.use('/object-fields', objectFieldsRouter);
 router.use('/custody', custodyRouter); // customizado
 router.use('/enrollment', enrollmentRouter);
 router.use('/sip-contacts', sipContactsRouter);
+router.use('/system', systemRouter);
+router.use('/export', exportRouter); // NOVO - Exportação CSV/PDF
 
 // ============ Access Logs (Acessos Registrados) ============
 router.get('/access-logs', accessLogsController.list.bind(accessLogsController));
@@ -195,5 +212,77 @@ router.post('/access-rule-time-zones', requireAuth, accessRuleTimeZonesControlle
 router.patch('/access-rule-time-zones/:id', requireAuth, accessRuleTimeZonesController.update.bind(accessRuleTimeZonesController));
 router.delete('/access-rule-time-zones/:id', requireAuth, accessRuleTimeZonesController.delete.bind(accessRuleTimeZonesController));
 
+// ============ Portal Access Rules (Portal -> Regras de Acesso) ============
+const portalAccessRulesController = new GenericController('portal_access_rules');
+router.get('/portal-access-rules', portalAccessRulesController.list.bind(portalAccessRulesController));
+router.get('/portal-access-rules/:id', portalAccessRulesController.getById.bind(portalAccessRulesController));
+router.post('/portal-access-rules', requireAuth, portalAccessRulesController.create.bind(portalAccessRulesController));
+router.delete('/portal-access-rules/:id', requireAuth, portalAccessRulesController.delete.bind(portalAccessRulesController));
+
+// ============ Area Access Rules (Área -> Regras de Acesso) ============
+const areaAccessRulesController = new GenericController('area_access_rules');
+router.get('/area-access-rules', areaAccessRulesController.list.bind(areaAccessRulesController));
+router.get('/area-access-rules/:id', areaAccessRulesController.getById.bind(areaAccessRulesController));
+router.post('/area-access-rules', requireAuth, areaAccessRulesController.create.bind(areaAccessRulesController));
+router.delete('/area-access-rules/:id', requireAuth, areaAccessRulesController.delete.bind(areaAccessRulesController));
+
+// ============ Actions / Portal Actions (Ações Programáveis) ============
+const actionsController = new GenericController('actions');
+router.get('/actions', actionsController.list.bind(actionsController));
+router.get('/actions/:id', actionsController.getById.bind(actionsController));
+router.post('/actions', requireAuth, actionsController.create.bind(actionsController));
+router.patch('/actions/:id', requireAuth, actionsController.update.bind(actionsController));
+router.delete('/actions/:id', requireAuth, actionsController.delete.bind(actionsController));
+
+const portalActionsController = new GenericController('portal_actions');
+router.get('/portal-actions', portalActionsController.list.bind(portalActionsController));
+router.get('/portal-actions/:id', portalActionsController.getById.bind(portalActionsController));
+router.post('/portal-actions', requireAuth, portalActionsController.create.bind(portalActionsController));
+router.patch('/portal-actions/:id', requireAuth, portalActionsController.update.bind(portalActionsController));
+router.delete('/portal-actions/:id', requireAuth, portalActionsController.delete.bind(portalActionsController));
+
+// ============ Contacts (Contatos SIP/Interfonia) ============
+const contactsController = new GenericController('contacts');
+router.get('/contacts', contactsController.list.bind(contactsController));
+router.get('/contacts/:id', contactsController.getById.bind(contactsController));
+router.post('/contacts', requireAuth, contactsController.create.bind(contactsController));
+router.patch('/contacts/:id', requireAuth, contactsController.update.bind(contactsController));
+router.delete('/contacts/:id', requireAuth, contactsController.delete.bind(contactsController));
+
+// ============ Alarm Zones (Zonas de Alarme) ============
+const alarmZonesController = new GenericController('alarm_zones');
+router.get('/alarm-zones', alarmZonesController.list.bind(alarmZonesController));
+router.get('/alarm-zones/:id', alarmZonesController.getById.bind(alarmZonesController));
+router.post('/alarm-zones', requireAuth, alarmZonesController.create.bind(alarmZonesController));
+router.patch('/alarm-zones/:id', requireAuth, alarmZonesController.update.bind(alarmZonesController));
+router.delete('/alarm-zones/:id', requireAuth, alarmZonesController.delete.bind(alarmZonesController));
+
+const alarmZoneTimeZonesController = new GenericController('alarm_zone_time_zones');
+router.get('/alarm-zone-time-zones', alarmZoneTimeZonesController.list.bind(alarmZoneTimeZonesController));
+router.get('/alarm-zone-time-zones/:id', alarmZoneTimeZonesController.getById.bind(alarmZoneTimeZonesController));
+router.post('/alarm-zone-time-zones', requireAuth, alarmZoneTimeZonesController.create.bind(alarmZoneTimeZonesController));
+router.delete('/alarm-zone-time-zones/:id', requireAuth, alarmZoneTimeZonesController.delete.bind(alarmZoneTimeZonesController));
+
+// ============ Identification Rules (Regras de Identificação) ============
+const identificationRulesController = new GenericController('identification_rules');
+router.get('/identification-rules', identificationRulesController.list.bind(identificationRulesController));
+router.get('/identification-rules/:id', identificationRulesController.getById.bind(identificationRulesController));
+router.post('/identification-rules', requireAuth, identificationRulesController.create.bind(identificationRulesController));
+router.patch('/identification-rules/:id', requireAuth, identificationRulesController.update.bind(identificationRulesController));
+router.delete('/identification-rules/:id', requireAuth, identificationRulesController.delete.bind(identificationRulesController));
+
+// ============ Contingency Cards ============
+const contingencyCardsController = new GenericController('contingency_cards');
+router.get('/contingency-cards', contingencyCardsController.list.bind(contingencyCardsController));
+router.get('/contingency-cards/:id', contingencyCardsController.getById.bind(contingencyCardsController));
+router.post('/contingency-cards', requireAuth, contingencyCardsController.create.bind(contingencyCardsController));
+router.delete('/contingency-cards/:id', requireAuth, contingencyCardsController.delete.bind(contingencyCardsController));
+
+// ============ Change Logs (Auditoria de Objects) ============
+const changeLogsController = new GenericController('change_logs');
+router.get('/change-logs', changeLogsController.list.bind(changeLogsController));
+router.get('/change-logs/:id', changeLogsController.getById.bind(changeLogsController));
+
+// NOTA: sync-time está em /api/system/sync-time via systemRouter
 
 module.exports = router;

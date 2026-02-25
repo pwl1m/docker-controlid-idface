@@ -256,17 +256,6 @@ class DeviceTestsController {
             res.status(500).json({ error: error.message });
         }
     }
-
-    async getCatraInfo(req, res) {
-        try {
-            const data = await idFaceService.getFcgi('get_catra_info.fcgi', {
-                responseType: 'json'
-            });
-            res.json(data.data);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
 }
 
 module.exports = DeviceTestsController;

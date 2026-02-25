@@ -7,6 +7,53 @@ class IDFaceService {
         this.session = null;
         this.sessionCheckInterval = null;
         this.sessionLifetime = 5 * 60 * 1000; // 5 minutes
+        
+        // ============ SUPORTE A MÚLTIPLOS FIRMWARES ============
+        this.firmwareVersion = null;  // Cache da versão do firmware
+        this.firmwareMajor = 0;
+        this.firmwareMinor = 0;
+    }
+
+    /**
+     * Detecta a versão do firmware e armazena em cache
+     * Chamado automaticamente no primeiro uso
+     */
+    async detectFirmwareVersion() {
+        if (this.firmwareVersion) return this.firmwareVersion;
+        
+        try {
+            const info = await this.getDeviceInfo();
+            this.firmwareVersion = info.firmware || info.version || 'unknown';
+            
+            // Extrair major.minor
+            const match = this.firmwareVersion.match(/^(\d+)\.(\d+)/);
+            if (match) {
+                this.firmwareMajor = parseInt(match[1], 10);
+                this.firmwareMinor = parseInt(match[2], 10);
+            }
+            
+            logger.info(`[FIRMWARE] Versão detectada: ${this.firmwareVersion} (${this.firmwareMajor}.${this.firmwareMinor})`);
+            return this.firmwareVersion;
+        } catch (error) {
+            logger.warn(`[FIRMWARE] Falha ao detectar versão: ${error.message}`);
+            return 'unknown';
+        }
+    }
+
+    /**
+     * Verifica se o firmware é 6.23.x ou superior
+     * Usado para determinar formato de API
+     */
+    isFirmware623OrHigher() {
+        return this.firmwareMajor > 6 || (this.firmwareMajor === 6 && this.firmwareMinor >= 23);
+    }
+
+    /**
+     * Verifica se o firmware é anterior a 6.23.0
+     * Usado para manter compatibilidade retroativa
+     */
+    isFirmwareLegacy() {
+        return !this.isFirmware623OrHigher();
     }
 
     get baseUrl() {
@@ -69,13 +116,20 @@ class IDFaceService {
 
     startSessionCheck() {
         if (this.sessionCheckInterval) clearInterval(this.sessionCheckInterval);
+        // Verificar a cada 2 minutos (sessão Control iD expira em ~10min de inatividade)
         this.sessionCheckInterval = setInterval(async () => {
-            const valid = await this.isSessionValid();
-            if (!valid) {
-                logger.warn('Session invalid, will re-authenticate on next request');
+            try {
+                const valid = await this.isSessionValid();
+                if (!valid) {
+                    logger.warn('Session expired during periodic check, re-authenticating...');
+                    this.session = null;
+                    await this.authenticate();
+                }
+            } catch (error) {
+                logger.error('Session check error:', error.message);
                 this.session = null;
             }
-        }, this.sessionLifetime);
+        }, 2 * 60 * 1000);
     }
 
     async getDeviceInfo() {
@@ -252,14 +306,70 @@ class IDFaceService {
         try {
             const url = this.buildUrl(path);
             const resp = await axios.post(url, payload, {
-                timeout: 10000,
+                timeout: options.timeout || 10000,
                 responseType: options.responseType || 'json',
                 headers: options.headers || {}
             });
             return resp;
         } catch (error) {
+            // Se o device retorna 401/403, re-autenticar e tentar uma vez
+            if (error?.response?.status === 401 || error?.response?.status === 403) {
+                logger.warn(`Auth error on ${path}, re-authenticating and retrying...`);
+                this.session = null;
+                await this.ensureAuthenticated();
+                const retryUrl = this.buildUrl(path);
+                return await axios.post(retryUrl, payload, {
+                    timeout: options.timeout || 10000,
+                    responseType: options.responseType || 'json',
+                    headers: options.headers || {}
+                });
+            }
             logger.error(`postFcgi(${path}) failed:`, error.message);
             throw this.normalizeAxiosError(error, `postFcgi(${path})`);
+        }
+    }
+
+    /**
+     * POST para endpoints que requerem binary (octet-stream)
+     * Usado para upload de imagens faciais, screenshots, etc.
+     */
+    async postFcgiBinary(path, buffer, method = 'POST') {
+        await this.ensureAuthenticated();
+        try {
+            const url = this.buildUrl(path);
+            const config = {
+                timeout: 30000,
+                headers: {
+                    'Content-Type': 'application/octet-stream'
+                },
+                responseType: 'arraybuffer'
+            };
+
+            let resp;
+            if (method === 'GET') {
+                resp = await axios.get(url, config);
+            } else {
+                resp = await axios.post(url, buffer, config);
+            }
+            return resp;
+        } catch (error) {
+            if (error?.response?.status === 401 || error?.response?.status === 403) {
+                logger.warn(`Auth error on binary ${path}, re-authenticating and retrying...`);
+                this.session = null;
+                await this.ensureAuthenticated();
+                const retryUrl = this.buildUrl(path);
+                const config = {
+                    timeout: 30000,
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    responseType: 'arraybuffer'
+                };
+                if (method === 'GET') {
+                    return await axios.get(retryUrl, config);
+                }
+                return await axios.post(retryUrl, buffer, config);
+            }
+            logger.error(`postFcgiBinary(${path}) failed:`, error.message);
+            throw this.normalizeAxiosError(error, `postFcgiBinary(${path})`);
         }
     }
 
@@ -268,12 +378,24 @@ class IDFaceService {
         try {
             const url = this.buildUrl(path);
             const resp = await axios.get(url, {
-                timeout: 10000,
+                timeout: options.timeout || 10000,
                 responseType: options.responseType || 'json',
                 headers: options.headers || {}
             });
             return resp;
         } catch (error) {
+            // Se o device retorna 401/403, re-autenticar e tentar uma vez
+            if (error?.response?.status === 401 || error?.response?.status === 403) {
+                logger.warn(`Auth error on ${path}, re-authenticating and retrying...`);
+                this.session = null;
+                await this.ensureAuthenticated();
+                const retryUrl = this.buildUrl(path);
+                return await axios.get(retryUrl, {
+                    timeout: options.timeout || 10000,
+                    responseType: options.responseType || 'json',
+                    headers: options.headers || {}
+                });
+            }
             logger.error(`getFcgi(${path}) failed:`, error.message);
             throw this.normalizeAxiosError(error, `getFcgi(${path})`);
         }
@@ -341,7 +463,196 @@ class IDFaceService {
         }
     }
 
-    // Métodos auxiliares
+    // ============ ENDPOINTS DE SISTEMA ============
+
+    async getSystemInformation() {
+        // Alias explícito para getDeviceInfo (ambos usam system_information.fcgi)
+        return this.getDeviceInfo();
+    }
+
+    /**
+     * Sincroniza a hora do device com o servidor
+     * 
+     * TESTADO em 2026-02-20:
+     * - Firmware 6.23.0: usa 'minute' e 'second' ✓
+     * - O formato 'min'/'sec' NÃO funciona no 6.23.0
+     * 
+     * O método usa o formato padrão (minute/second) que funciona no 6.23.0
+     * Com fallback automático se falhar
+     */
+    async setSystemTime(date = new Date()) {
+        await this.ensureAuthenticated();
+        
+        const day = parseInt(date.getDate(), 10);
+        const month = parseInt(date.getMonth() + 1, 10);
+        const year = parseInt(date.getFullYear(), 10);
+        const hour = parseInt(date.getHours(), 10);
+        const minutes = parseInt(date.getMinutes(), 10);
+        const seconds = parseInt(date.getSeconds(), 10);
+        
+        // Formato padrão: minute/second (confirmado funcionando no 6.23.0)
+        const payloadStandard = {
+            day, month, year, hour,
+            minute: minutes,
+            second: seconds
+        };
+        
+        // Formato alternativo: min/sec (alguns firmwares podem usar)
+        const payloadAlt = {
+            day, month, year, hour,
+            min: minutes,
+            sec: seconds
+        };
+        
+        logger.info(`[SYSTEM] Sincronizando hora: ${JSON.stringify(payloadStandard)}`);
+        
+        try {
+            const resp = await this.postFcgi('set_system_time.fcgi', payloadStandard);
+            return { success: true, synced: payloadStandard, response: resp.data };
+        } catch (error) {
+            // Se falhou, tentar formato alternativo
+            logger.warn(`[SYSTEM] Formato padrão falhou, tentando alternativo (min/sec)...`);
+            const resp = await this.postFcgi('set_system_time.fcgi', payloadAlt);
+            return { success: true, synced: payloadAlt, format: 'alternative', response: resp.data };
+        }
+    }
+
+    async reboot() {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/reboot.fcgi?session=${this.session}`;
+            const resp = await axios.post(url, {}, { timeout: 10000 });
+            // Após reboot, sessão morre
+            this.session = null;
+            logger.info('Device reboot initiated');
+            return resp.data;
+        } catch (error) {
+            this.session = null;
+            logger.error('reboot failed:', error.message);
+            throw this.normalizeAxiosError(error, 'reboot');
+        }
+    }
+
+    async backupObjects() {
+        const resp = await this.postFcgi('backup_objects.fcgi', {}, {
+            responseType: 'arraybuffer',
+            timeout: 30000
+        });
+        return resp.data;
+    }
+
+    async restoreObjects(backupData) {
+        const resp = await this.postFcgi('restore_objects.fcgi', backupData, {
+            headers: { 'Content-Type': 'application/octet-stream' },
+            timeout: 30000
+        });
+        return resp.data;
+    }
+
+    async messageToScreen(message, timeout = 5000) {
+        const resp = await this.postFcgi('message_to_screen.fcgi', { message, timeout });
+        return resp.data;
+    }
+
+    async userHashPassword(password) {
+        const resp = await this.postFcgi('user_hash_password.fcgi', { password });
+        return resp.data;
+    }
+
+    async exportAfd(options = {}) {
+        const resp = await this.postFcgi('export_afd.fcgi', options, {
+            responseType: 'text',
+            timeout: 30000
+        });
+        return resp.data;
+    }
+
+    async exportAuditLogs(filters = {}) {
+        const defaultFilters = {
+            config: 1, api: 1, usb: 1,
+            network: 1, time: 1, online: 1, menu: 1
+        };
+        const resp = await this.postFcgi('export_audit_logs.fcgi',
+            { ...defaultFilters, ...filters },
+            { responseType: 'text', timeout: 30000 }
+        );
+        return resp.data;
+    }
+
+    async getConfiguration(modulePayload) {
+        const resp = await this.postFcgi('get_configuration.fcgi', modulePayload);
+        return resp.data;
+    }
+
+    async setConfiguration(payload) {
+        const resp = await this.postFcgi('set_configuration.fcgi', payload);
+        return resp.data;
+    }
+
+    /**
+     * Configura o módulo SIP/Interfonia
+     * 
+     * ⚠️ IMPORTANTE: O parâmetro 'dialing_display_mode' é OBRIGATÓRIO!
+     * Sem ele, o device pode crashar.
+     * 
+     * @param {Object} pjsipConfig - Configuração do PJSIP
+     * @returns {Promise<Object>} Resultado da configuração
+     */
+    async setInterfoniaSipConfig(pjsipConfig) {
+        // Garantir que dialing_display_mode está presente (CRÍTICO - evita crash do device)
+        const safeConfig = {
+            dialing_display_mode: '0',  // OBRIGATÓRIO - sem isso device crasha
+            ...pjsipConfig
+        };
+        
+        logger.info('[SIP] Configurando PJSIP...', { 
+            server: safeConfig.server_ip, 
+            branch: safeConfig.branch,
+            enabled: safeConfig.enabled 
+        });
+        
+        const resp = await this.postFcgi('set_configuration.fcgi', { pjsip: safeConfig });
+        return resp.data;
+    }
+
+    /**
+     * Obtém status atual do registro SIP
+     * 
+     * Códigos de status:
+     * - 200: Registrado com sucesso
+     * - 401/403: Falha de autenticação
+     * - 408: Timeout (servidor não respondeu)
+     * - 503: Serviço indisponível
+     * 
+     * @returns {Promise<Object>} { status: number, in_call: boolean }
+     */
+    async getSipStatus() {
+        const resp = await this.postFcgi('get_sip_status.fcgi', {});
+        return resp.data;
+    }
+
+    /**
+     * Inicia uma chamada SIP para um ramal
+     * @param {string} target - Número do ramal a chamar
+     * @returns {Promise<Object>}
+     */
+    async makeSipCall(target) {
+        logger.info(`[SIP] Iniciando chamada para: ${target}`);
+        const resp = await this.postFcgi('make_sip_call.fcgi', { target });
+        return resp.data;
+    }
+
+    /**
+     * Finaliza a chamada SIP atual
+     * @returns {Promise<Object>}
+     */
+    async finalizeSipCall() {
+        logger.info('[SIP] Finalizando chamada');
+        const resp = await this.postFcgi('finalize_sip_call.fcgi', {});
+        return resp.data;
+    }
+
+    // ============ Métodos auxiliares ============
     async getUsers(options = {}) {
         return this.loadObjects('users', options);
     }

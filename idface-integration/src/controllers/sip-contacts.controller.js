@@ -191,12 +191,13 @@ class SipContactsController {
                 return res.status(404).json({ error: 'Usuário não encontrado' });
             }
 
-            // Atualizar campo sip_ramal usando a assinatura existente: modifyObjects(objectType, id, values)
-            const updateResult = await idFaceService.modifyObjects(
-                this.OBJECT_TYPE,
-                parseInt(id),
-                { [this.FIELD_NAME]: String(ramal).trim() }
-            );
+            // CORREÇÃO: Usar postFcgi diretamente com modify_objects.fcgi
+            // A assinatura de modifyObjects no service pode não estar compatível
+            const updateResult = await idFaceService.postFcgi('modify_objects.fcgi', {
+                object: this.OBJECT_TYPE,
+                values: { [this.FIELD_NAME]: String(ramal).trim() },
+                where: { [this.OBJECT_TYPE]: { id: parseInt(id) } }
+            });
 
             logger.info(`[SIP-CONTACTS] Ramal ${ramal} definido para user ${id}`);
 
@@ -204,6 +205,7 @@ class SipContactsController {
                 success: true,
                 user_id: parseInt(id),
                 ramal: String(ramal).trim(),
+                name: users[0].name,
                 message: `Ramal ${ramal} configurado para ${users[0].name}`
             });
 
