@@ -19,6 +19,7 @@ const custodyRouter = require('./custody'); // customizado
 const enrollmentRouter = require('./enrollment');
 const sipContactsRouter = require('./sip-contacts');
 const systemRouter = require('./system');
+const exportRouter = require('./export'); // NOVO - Exportação CSV/PDF
 
 // Controllers
 const deviceController = new DeviceController();
@@ -59,6 +60,7 @@ router.use('/custody', custodyRouter); // customizado
 router.use('/enrollment', enrollmentRouter);
 router.use('/sip-contacts', sipContactsRouter);
 router.use('/system', systemRouter);
+router.use('/export', exportRouter); // NOVO - Exportação CSV/PDF
 
 // ============ Access Logs (Acessos Registrados) ============
 router.get('/access-logs', accessLogsController.list.bind(accessLogsController));
@@ -268,5 +270,6 @@ const changeLogsController = new GenericController('change_logs');
 router.get('/change-logs', changeLogsController.list.bind(changeLogsController));
 router.get('/change-logs/:id', changeLogsController.getById.bind(changeLogsController));
 
+// NOTA: sync-time está em /api/system/sync-time via systemRouter
 
 module.exports = router;

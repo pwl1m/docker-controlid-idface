@@ -329,6 +329,50 @@ class IDFaceService {
         }
     }
 
+    /**
+     * POST para endpoints que requerem binary (octet-stream)
+     * Usado para upload de imagens faciais, screenshots, etc.
+     */
+    async postFcgiBinary(path, buffer, method = 'POST') {
+        await this.ensureAuthenticated();
+        try {
+            const url = this.buildUrl(path);
+            const config = {
+                timeout: 30000,
+                headers: {
+                    'Content-Type': 'application/octet-stream'
+                },
+                responseType: 'arraybuffer'
+            };
+
+            let resp;
+            if (method === 'GET') {
+                resp = await axios.get(url, config);
+            } else {
+                resp = await axios.post(url, buffer, config);
+            }
+            return resp;
+        } catch (error) {
+            if (error?.response?.status === 401 || error?.response?.status === 403) {
+                logger.warn(`Auth error on binary ${path}, re-authenticating and retrying...`);
+                this.session = null;
+                await this.ensureAuthenticated();
+                const retryUrl = this.buildUrl(path);
+                const config = {
+                    timeout: 30000,
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    responseType: 'arraybuffer'
+                };
+                if (method === 'GET') {
+                    return await axios.get(retryUrl, config);
+                }
+                return await axios.post(retryUrl, buffer, config);
+            }
+            logger.error(`postFcgiBinary(${path}) failed:`, error.message);
+            throw this.normalizeAxiosError(error, `postFcgiBinary(${path})`);
+        }
+    }
+
     async getFcgi(path, options = {}) {
         await this.ensureAuthenticated();
         try {
@@ -463,11 +507,13 @@ class IDFaceService {
         logger.info(`[SYSTEM] Sincronizando hora: ${JSON.stringify(payloadStandard)}`);
         
         try {
-            return await this.postFcgi('set_system_time.fcgi', payloadStandard);
+            const resp = await this.postFcgi('set_system_time.fcgi', payloadStandard);
+            return { success: true, synced: payloadStandard, response: resp.data };
         } catch (error) {
             // Se falhou, tentar formato alternativo
             logger.warn(`[SYSTEM] Formato padrão falhou, tentando alternativo (min/sec)...`);
-            return await this.postFcgi('set_system_time.fcgi', payloadAlt);
+            const resp = await this.postFcgi('set_system_time.fcgi', payloadAlt);
+            return { success: true, synced: payloadAlt, format: 'alternative', response: resp.data };
         }
     }
 

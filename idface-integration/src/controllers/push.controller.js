@@ -143,6 +143,48 @@ class PushController {
             res.status(500).json({ error: error.message });
         }
     }
+
+    /**
+     * Processa eventos de chamada SIP
+     */
+    processSipCallEvent(event) {
+        const { type, user_id, timestamp, call_target, duration } = event;
+        
+        logger.info('[PUSH] SIP Call Event:', {
+            type,       // 'call_started', 'call_answered', 'call_ended', 'dtmf_received'
+            user_id,
+            call_target,
+            duration,
+            timestamp
+        });
+
+        // Emitir para sistema externo (webhook, socket, etc)
+        this.emitEvent('sip_call', event);
+    }
+
+    /**
+     * Processa evento de liberação via DTMF
+     */
+    processDtmfDoorEvent(event) {
+        const { user_id, operator_ramal, dtmf_code, door, timestamp } = event;
+        
+        logger.info('[PUSH] DTMF Door Release:', {
+            user_id,
+            operator_ramal,  // Quem autorizou
+            dtmf_code,
+            door,
+            timestamp
+        });
+
+        // Logar acesso autorizado por operador
+        this.logCustodyAccess({
+            type: 'dual_custody_access',
+            user_id,
+            authorized_by: operator_ramal,
+            method: 'dtmf',
+            timestamp
+        });
+    }
 }
 
 module.exports = PushController;

@@ -38,11 +38,12 @@ router.get('/session', async (req, res) => {
 router.post('/sync-time', requireAuth, async (req, res) => {
     try {
         const datetime = req.body?.datetime ? new Date(req.body.datetime) : new Date();
-        const data = await idFaceService.setSystemTime(datetime);
+        const result = await idFaceService.setSystemTime(datetime);
         res.json({
             success: true,
             synced_to: datetime.toISOString(),
-            response: data
+            device_time: result.synced,
+            format_used: result.format || 'standard'
         });
     } catch (error) {
         logger.error('POST /system/sync-time error:', error.message);
