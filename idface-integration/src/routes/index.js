@@ -4,11 +4,11 @@ const DeviceController = require('../controllers/device.controller');
 const PushController = require('../controllers/push.controller');
 const SecBoxController = require('../controllers/sec-boxs.controller');
 const UtilsController = require('../controllers/utils.controller');
+const StatisticsController = require('../controllers/statistics.controller'); // NOVO
 const usersRouter = require('./users');
 const deviceTestsRouter = require('./device-tests');
 const GenericController = require('../controllers/generic.controller');
 const requireAuth = require('../middlewares/auth');
-const idFaceService = require('../services/idface.service'); // ADICIONAR
 const interfoniaRouter = require('./interfonia-sip');
 const registroRouter = require('./registro');
 const userGroupsRouter = require('./user-groups');
@@ -26,6 +26,7 @@ const deviceController = new DeviceController();
 const pushController = new PushController();
 const secBoxsController = new SecBoxController();
 const utilsController = new UtilsController();
+const statisticsController = new StatisticsController(); // NOVO
 
 // Controllers genéricos para logs
 const accessLogsController = new GenericController('access_logs');
@@ -41,6 +42,18 @@ router.post('/login', deviceController.login.bind(deviceController));
 router.post('/recognize', deviceController.recognize.bind(deviceController));
 router.get('/device/info', deviceController.getInfo.bind(deviceController));
 router.post('/device/configure-push', deviceController.configurePush.bind(deviceController));
+
+// ============ Device Config (Configurações do Equipamento) ============
+router.get('/device/config', requireAuth, deviceController.getConfig.bind(deviceController));
+router.put('/device/config', requireAuth, deviceController.setConfig.bind(deviceController));
+router.get('/device/config/identification-timeout', requireAuth, deviceController.getIdentificationTimeout.bind(deviceController));
+router.put('/device/config/identification-timeout', requireAuth, deviceController.setIdentificationTimeout.bind(deviceController));
+
+// ============ Statistics (Estatísticas de Acesso) ============
+router.get('/statistics/access-summary', requireAuth, statisticsController.getAccessSummary.bind(statisticsController));
+router.get('/statistics/blocks', requireAuth, statisticsController.getBlocks.bind(statisticsController));
+router.get('/statistics/user/:user_id', requireAuth, statisticsController.getUserStats.bind(statisticsController));
+router.get('/statistics/events', statisticsController.getEventTypes.bind(statisticsController));
 
 // ============ Push Management (API interna) ============
 router.post('/push/enqueue', requireAuth, pushController.enqueueCommand.bind(pushController));

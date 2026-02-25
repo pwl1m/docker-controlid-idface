@@ -53,6 +53,18 @@ require('dotenv').config();
         res.json([]);
     });
 
+    // ============ MODO MONITOR ============
+
+    // Este bloco deve vir antes dos handlers específicos de /api/notifications/*
+    app.post('/api/notifications/*', (req, res, next) => {
+        logger.info('==========================================');
+        logger.info(`🔍 EVENTO CAPTURADO: ${req.path}`);
+        logger.info('==========================================');
+        logger.info('Body completo:', JSON.stringify(req.body, null, 2));
+        logger.info('==========================================');
+        next();
+    });
+
     app.post('/api/notifications/operation_mode', (req, res) => {
         const event = req.body;
         logger.info(`[MODE] ${event.operation_mode?.mode_name || 'N/A'} - Device: ${event.device_id || 'N/A'}`);
@@ -135,18 +147,6 @@ require('dotenv').config();
         }
         
         res.json({});
-    });
-
-    // ============ MODO MONITOR ============
-
-    // ADICIONE ESTE BLOCO ANTES DOS HANDLERS
-    app.post('/api/notifications/*', (req, res, next) => {
-        logger.info('==========================================');
-        logger.info(`🔍 EVENTO CAPTURADO: ${req.path}`);
-        logger.info('==========================================');
-        logger.info('Body completo:', JSON.stringify(req.body, null, 2));
-        logger.info('==========================================');
-        next();
     });
 
     function handleUserIdentified(req, res) {
@@ -263,7 +263,7 @@ require('dotenv').config();
     app.all('*', (req, res) => {
         logger.warn(`[NÃO MAPEADO] ${req.method} ${req.url}`);
         logger.warn(`Body: ${JSON.stringify(req.body)}`);
-        res.json({});
+        res.status(404).json({ error: 'Not Found' });
     });
 
     // ============ INICIALIZAÇÃO ============
