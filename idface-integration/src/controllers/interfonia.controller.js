@@ -1,6 +1,22 @@
 const idFaceService = require('../services/idface.service');
 
 class InterfoniaController {
+    handleError(res, error) {
+        return res.status(error.status || 500).json({
+            error: error.message,
+            details: error.details || undefined
+        });
+    }
+
+    async getConfig(req, res) {
+        try {
+            const data = await idFaceService.getInterfoniaSipConfig();
+            res.json(data);
+        } catch (error) {
+            return this.handleError(res, error);
+        }
+    }
+
     async setConfig(req, res) {
         try {
             if (!req.body?.pjsip) {
@@ -9,7 +25,7 @@ class InterfoniaController {
             const data = await idFaceService.postFcgi('set_configuration.fcgi', req.body);
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 
@@ -20,7 +36,7 @@ class InterfoniaController {
             });
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 
@@ -29,16 +45,16 @@ class InterfoniaController {
             const data = await idFaceService.postFcgi('get_pjsip_audio_message.fcgi', {});
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 
     async hasAudio(req, res) {
         try {
-            const data = await idFaceService.postFcgi('has_audio_access_messages.fcgi', {});
+            const data = await idFaceService.postFcgi('has_pjsip_audio_message.fcgi', {});
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 
@@ -49,7 +65,7 @@ class InterfoniaController {
             const data = await idFaceService.postFcgi('make_sip_call.fcgi', { target: String(target) });
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 
@@ -58,7 +74,7 @@ class InterfoniaController {
             const data = await idFaceService.postFcgi('finalize_sip_call.fcgi', {});
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 
@@ -67,7 +83,7 @@ class InterfoniaController {
             const data = await idFaceService.postFcgi('get_sip_status.fcgi', {});
             res.json(data.data);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return this.handleError(res, error);
         }
     }
 }

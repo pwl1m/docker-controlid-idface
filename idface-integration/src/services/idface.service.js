@@ -227,6 +227,26 @@ class IDFaceService {
         return `${this.baseUrl}/${normalized}${separator}session=${this.session}`;
     }
 
+    normalizeAxiosError(error, context = 'request') {
+        if (error?.response) {
+            const status = error.response.status;
+            const details = error.response.data;
+            const message =
+                details?.error ||
+                details?.message ||
+                `${context} failed with status code ${status}`;
+
+            const err = new Error(message);
+            err.status = status;
+            err.details = details;
+            return err;
+        }
+
+        const err = new Error(error?.message || `${context} failed`);
+        err.status = 502;
+        return err;
+    }
+
     async postFcgi(path, payload = null, options = {}) {
         await this.ensureAuthenticated();
         try {
@@ -239,7 +259,7 @@ class IDFaceService {
             return resp;
         } catch (error) {
             logger.error(`postFcgi(${path}) failed:`, error.message);
-            throw error;
+            throw this.normalizeAxiosError(error, `postFcgi(${path})`);
         }
     }
 
@@ -255,52 +275,46 @@ class IDFaceService {
             return resp;
         } catch (error) {
             logger.error(`getFcgi(${path}) failed:`, error.message);
-            throw error;
+            throw this.normalizeAxiosError(error, `getFcgi(${path})`);
         }
     }
 
-    async userHashPassword(password) {
-        const resp = await this.postFcgi('user_hash_password.fcgi', { password });
-        return resp.data;
-    }
+    async getInterfoniaSipConfig() {
+        const payload = {
+            pjsip: [
+                'enabled',
+                'server_ip',
+                'server_port',
+                'server_outbound_port',
+                'server_outbound_port_range',
+                'numeric_branch_enabled',
+                'branch',
+                'login',
+                'password',
+                'peer_to_peer_enabled',
+                'reg_status_query_period',
+                'server_retry_interval',
+                'max_call_time',
+                'push_button_debounce',
+                'auto_answer_enabled',
+                'auto_answer_delay',
+                'auto_call_button_enabled',
+                'rex_enabled',
+                'dialing_display_mode',
+                'auto_call_target',
+                'custom_identifier_auto_call',
+                'video_enabled',
+                'pjsip_custom_audio_enabled',
+                'custom_audio_volume_gain',
+                'mic_volume',
+                'speaker_volume',
+                'open_door_enabled',
+                'open_door_command',
+                'facial_id_during_call_enabled'
+            ]
+        };
 
-    async userSetImage(userId, imageBuffer) {
-        const resp = await this.postFcgi(
-            `user_set_image.fcgi&user_id=${Number(userId)}`,
-            imageBuffer,
-            { headers: { 'Content-Type': 'application/octet-stream' } }
-        );
-        return resp.data;
-    }
-
-    async userGetImage(userId) {
-        const resp = await this.postFcgi(
-            `user_get_image.fcgi&user_id=${Number(userId)}`,
-            {},
-            { responseType: 'arraybuffer' }
-        );
-
-        const contentType = resp.headers['content-type'] || 'image/jpeg';
-        const base64 = Buffer.from(resp.data).toString('base64');
-
-        return { contentType, base64 };
-    }
-
-    async userGetImageWithTimestamp(userId, getTimestamp = 1) {
-        const resp = await this.postFcgi(
-            `user_get_image.fcgi?user_id=${Number(userId)}&get_timestamp=${Number(getTimestamp)}`,
-            {},
-            { responseType: 'arraybuffer' }
-        );
-
-        const contentType = resp.headers['content-type'] || 'image/jpeg';
-        const base64 = Buffer.from(resp.data).toString('base64');
-
-        return { contentType, base64, headers: resp.headers };
-    }
-
-    async userListImages(getTimestamp = 1) {
-        const resp = await this.getFcgi(`user_list_images.fcgi?get_timestamp=${Number(getTimestamp)}`);
+        const resp = await this.postFcgi('get_configuration.fcgi', payload);
         return resp.data;
     }
 
@@ -309,9 +323,22 @@ class IDFaceService {
         return resp.data;
     }
 
-    async objectRemoveFields(payload) {
-        const resp = await this.postFcgi('object_remove_fields.fcgi', payload);
+    async objectRemoveField(payload) {
+        const resp = await this.postFcgi('object_remove_field.fcgi', payload);
         return resp.data;
+    }
+
+    // Compatibilidade retroativa com código já existente
+    async objectRemoveFields(payload) {
+        try {
+            return await this.objectRemoveField(payload);
+        } catch (error) {
+            if (error.status === 404) {
+                const resp = await this.postFcgi('object_remove_fields.fcgi', payload);
+                return resp.data;
+            }
+            throw error;
+        }
     }
 
     // Métodos auxiliares

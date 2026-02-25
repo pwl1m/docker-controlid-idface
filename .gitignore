@@ -6,3 +6,4 @@
 *.jpeg
 *.csv
 *.sh
+/scripts/

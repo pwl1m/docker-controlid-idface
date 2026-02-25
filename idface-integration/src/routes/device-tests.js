@@ -46,6 +46,20 @@ router.post('/face/config-limit-display', controller.limitToDisplayRegion.bind(c
 router.post('/face/config-led-brightness', controller.setLedBrightness.bind(controller));
 router.post('/face/config-min-distance', controller.setMinDetectDistance.bind(controller));
 
-router.get('/face/catra-info', controller.getCatraInfo.bind(controller));
+router.get('/face/catra-info', async (req, res) => {
+    try {
+        const data = await idFaceService.getFcgi('get_catra_info.fcgi');
+        res.json(data.data);
+    } catch (error) {
+        // Device iDFace não tem catraca
+        if (error.message?.includes('Invalid command')) {
+            return res.json({ 
+                supported: false, 
+                message: 'Este device não possui módulo de catraca' 
+            });
+        }
+        res.status(error.status || 500).json({ error: error.message });
+    }
+});
 
 module.exports = router;

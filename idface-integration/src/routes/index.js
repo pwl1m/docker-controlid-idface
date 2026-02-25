@@ -15,7 +15,9 @@ const userGroupsRouter = require('./user-groups');
 const userRolesRouter = require('./user-roles');
 const reportsRouter = require('./reports');
 const objectFieldsRouter = require('./object-fields');
+const custodyRouter = require('./custody'); // customizado
 
+// Controllers
 const deviceController = new DeviceController();
 const pushController = new PushController();
 const secBoxsController = new SecBoxController();
@@ -50,6 +52,7 @@ router.use('/user-groups', userGroupsRouter);
 router.use('/user-roles', userRolesRouter);
 router.use('/reports', reportsRouter);
 router.use('/object-fields', objectFieldsRouter);
+router.use('/custody', custodyRouter); // customizado
 
 // ============ Access Logs (Acessos Registrados) ============
 router.get('/access-logs', accessLogsController.list.bind(accessLogsController));

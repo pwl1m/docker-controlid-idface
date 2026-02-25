@@ -65,3 +65,63 @@ describe('IDFaceService', () => {
         expect(valid).toBe(false);
     });
 });
+
+describe('IDFaceService - SIP config and object fields', () => {
+    beforeEach(() => {
+        jest.resetAllMocks();
+        jest.spyOn(idFaceService, 'ensureAuthenticated').mockResolvedValue();
+        jest.spyOn(idFaceService, 'buildUrl').mockImplementation((p) => `http://device/${p}`);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    test('getInterfoniaSipConfig calls get_configuration.fcgi with pjsip keys', async () => {
+        axios.post.mockResolvedValueOnce({ data: { pjsip: { enabled: '1' } } });
+
+        const data = await idFaceService.getInterfoniaSipConfig();
+
+        expect(axios.post).toHaveBeenCalledTimes(1);
+        expect(axios.post.mock.calls[0][0]).toContain('get_configuration.fcgi');
+        expect(axios.post.mock.calls[0][1]).toHaveProperty('pjsip');
+        expect(Array.isArray(axios.post.mock.calls[0][1].pjsip)).toBe(true);
+        expect(data).toEqual({ pjsip: { enabled: '1' } });
+    });
+
+    test('objectRemoveField uses singular endpoint object_remove_field.fcgi', async () => {
+        axios.post.mockResolvedValueOnce({ data: { success: true } });
+
+        const data = await idFaceService.objectRemoveField({ object: 'users', field_name: 'cpf' });
+
+        expect(axios.post).toHaveBeenCalledTimes(1);
+        expect(axios.post.mock.calls[0][0]).toContain('object_remove_field.fcgi');
+        expect(data).toEqual({ success: true });
+    });
+
+    test('objectRemoveFields falls back to object_remove_fields.fcgi on 404', async () => {
+        axios.post
+            .mockRejectedValueOnce({ response: { status: 404, data: { error: 'not found' } } })
+            .mockResolvedValueOnce({ data: { success: true } });
+
+        const data = await idFaceService.objectRemoveFields({ object: 'users', field_name: 'cpf' });
+
+        expect(axios.post).toHaveBeenCalledTimes(2);
+        expect(axios.post.mock.calls[0][0]).toContain('object_remove_field.fcgi');
+        expect(axios.post.mock.calls[1][0]).toContain('object_remove_fields.fcgi');
+        expect(data).toEqual({ success: true });
+    });
+
+    test('postFcgi maps axios 400 to error.status=400 (not 500)', async () => {
+        axios.post.mockRejectedValueOnce({
+            response: { status: 400, data: { error: 'invalid payload' } }
+        });
+
+        await expect(idFaceService.postFcgi('set_configuration.fcgi', { any: 1 }))
+            .rejects
+            .toMatchObject({
+                status: 400,
+                details: { error: 'invalid payload' }
+            });
+    });
+});
