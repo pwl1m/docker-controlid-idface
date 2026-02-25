@@ -16,6 +16,8 @@ const userRolesRouter = require('./user-roles');
 const reportsRouter = require('./reports');
 const objectFieldsRouter = require('./object-fields');
 const custodyRouter = require('./custody'); // customizado
+const enrollmentRouter = require('./enrollment');
+const sipContactsRouter = require('./sip-contacts');
 
 // Controllers
 const deviceController = new DeviceController();
@@ -53,6 +55,8 @@ router.use('/user-roles', userRolesRouter);
 router.use('/reports', reportsRouter);
 router.use('/object-fields', objectFieldsRouter);
 router.use('/custody', custodyRouter); // customizado
+router.use('/enrollment', enrollmentRouter);
+router.use('/sip-contacts', sipContactsRouter);
 
 // ============ Access Logs (Acessos Registrados) ============
 router.get('/access-logs', accessLogsController.list.bind(accessLogsController));
