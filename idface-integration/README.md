@@ -238,6 +238,49 @@ Base URL: `http://localhost:3001/api`
 | Reports | `/reports` | Relatórios |
 | Export | `/export` | Export CSV/PDF |
 
+
+## Custodia 
+### Modo Padrão (1:N Face Only)
+[Pessoa chega] → [Device captura rosto] → [Compara com TODOS os templates]
+                                                      ↓
+                                             [Match encontrado?]
+                                                   /        \
+                                                 SIM        NÃO
+                                                  ↓          ↓
+                                            [Porta abre]  [Acesso negado]
+
+### Simples Custódia (1:1 PIN + Face)
+      Precisa saber o PIN E ter o rosto
+[Pessoa chega] → [Digita PIN: 1234] → [Device busca user do PIN]
+                                               ↓
+                                    [Captura rosto]
+                                               ↓
+                                    [Compara 1:1 com template DO USUÁRIO DO PIN]
+                                               ↓
+                                       [Match?]
+                                      /        \
+                                    SIM        NÃO
+                                     ↓          ↓
+                               [Porta abre]  [Negado: "Rosto não confere"]
+
+
+### Dupla Custódia (PIN + Face + Operador SOC)
+      3 fatores + decisão humana
+[Pessoa chega] → [Digita PIN] → [Face 1:1 OK]
+                                      ↓
+                            [Device liga para SOC]
+                                      ↓
+                            [Operador atende]
+                                      ↓
+                            [Vê vídeo da pessoa]
+                                      ↓
+                            [Decide: liberar?]
+                                   /        \
+                         [Digita #1234]    [Desliga]
+                           (DTMF)
+                              ↓               ↓
+                        [Porta abre]    [Porta NÃO abre
+
 ## Autenticação
 
 ### Login no Backend
@@ -350,6 +393,9 @@ curl -s -X POST "$BASE_URL/api/enrollment/face/test" \
 1. Verificar se `SERVER_IP` está acessível pelo dispositivo
 2. Checar logs de heartbeat: `SHOW_HEARTBEAT_LOGS=true`
 
+
+
+
 ## Documentação Adicional
 
 - https://www.controlid.com.br/docs/idface-en/
@@ -362,3 +408,4 @@ curl -s -X POST "$BASE_URL/api/enrollment/face/test" \
 - https://www.controlid.com.br/docs/access-api-pt/particularidade-dos-produtos/interfonia-sip-idface/
 - https://www.controlid.com.br/docs/idface-pt/interfonia/configuracoes-interfonia/
 - https://www.controlid.com.br/docs/access-api-en/operating-modes/introduction-to-operating-modes/
+
