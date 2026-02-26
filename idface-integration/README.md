@@ -2,6 +2,51 @@
 
 API backend para integração com dispositivos **ControlID iDFace** (reconhecimento facial). Abstrai a comunicação FCGI do equipamento e expõe endpoints REST para frontend/integrações.
 
+## Visão Geral
+
+O backend é um “tradutor” entre API HTTP e o device Control iD.
+Entrada principal: index.js.
+Rotas da API interna são montadas em index.js via prefixo /api.
+Quase toda lógica de conversa com o device passa por idface.service.js.
+Controllers recebem requisição, validam dados, chamam service, devolvem resposta.
+
+## Como os arquivos se conectam
+
+Fluxo padrão: Route -> Controller -> idface.service -> axios -> device.
+
+## Exemplo real:
+rota em system.js
+chama método em idface.service.js
+que monta URL com sessão e chama endpoint .fcgi do IDFace.
+
+CRUD genérico (users, groups, holidays, etc.) reutiliza generic.controller.js, evitando duplicar código.
+
+Segurança é por API key no middleware auth.js (x-api-key ou api_key).
+
+## Arquivos mais importantes (ordem de prioridade)
+
+idface.service.js — núcleo de integração com o device.
+
+idface-integration/src/index.js — bootstrap, callbacks e entrada HTTP.
+
+idface-integration/src/routes/index.js — mapa de tudo que a API expõe.
+
+idface-integration/src/config/index.js — IP do device, porta, API key, flags.
+
+Controllers de domínio: device.controller.js, statistics.controller.js, enrollment.controller.js, interfonia.controller.js, export.controller.js.
+
+## Quais arquivos falam com o IDFace
+
+Direto (principal): idface.service.js.
+
+Indireto (via service): praticamente todos os controllers em controllers/.
+
+Também há fluxo inverso Device -> Backend em callbacks de enrollment/ e notificações no idface-integration/src/index.js.
+
+## Pontos importantes
+
+O endpoint /api/login existe e autentica no device, mas o middleware de proteção continua sendo API key.
+
 ## Funcionalidades
 
 - **Autenticação e Reconhecimento Facial**
