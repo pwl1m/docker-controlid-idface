@@ -4,11 +4,12 @@ const DeviceController = require('../controllers/device.controller');
 const PushController = require('../controllers/push.controller');
 const SecBoxController = require('../controllers/sec-boxs.controller');
 const UtilsController = require('../controllers/utils.controller');
-const StatisticsController = require('../controllers/statistics.controller'); // NOVO
+const StatisticsController = require('../controllers/statistics.controller');
 const usersRouter = require('./users');
 const deviceTestsRouter = require('./device-tests');
 const GenericController = require('../controllers/generic.controller');
 const requireAuth = require('../middlewares/auth');
+const idFaceService = require('../services/idface.service'); 
 const interfoniaRouter = require('./interfonia-sip');
 const registroRouter = require('./registro');
 const userGroupsRouter = require('./user-groups');
@@ -19,14 +20,14 @@ const custodyRouter = require('./custody'); // customizado
 const enrollmentRouter = require('./enrollment');
 const sipContactsRouter = require('./sip-contacts');
 const systemRouter = require('./system');
-const exportRouter = require('./export'); // NOVO - Exportação CSV/PDF
+const exportRouter = require('./export'); 
 
 // Controllers
 const deviceController = new DeviceController();
 const pushController = new PushController();
 const secBoxsController = new SecBoxController();
 const utilsController = new UtilsController();
-const statisticsController = new StatisticsController(); // NOVO
+const statisticsController = new StatisticsController();
 
 // Controllers genéricos para logs
 const accessLogsController = new GenericController('access_logs');
@@ -283,6 +284,36 @@ const changeLogsController = new GenericController('change_logs');
 router.get('/change-logs', changeLogsController.list.bind(changeLogsController));
 router.get('/change-logs/:id', changeLogsController.getById.bind(changeLogsController));
 
-// NOTA: sync-time está em /api/system/sync-time via systemRouter
+// ============ Session (Sessão) ============
+router.get('/session/status', requireAuth, async (req, res) => {
+    try {
+        const result = await idFaceService.postFcgi('session_is_valid.fcgi', {});
+        res.json({
+            valid: result.session_is_valid === true,
+            session_is_valid: result.session_is_valid
+        });
+    } catch (error) {
+        res.json({
+            valid: false,
+            error: error.message
+        });
+    }
+});
+
+router.post('/logout', requireAuth, async (req, res) => {
+    try {
+        await idFaceService.postFcgi('logout.fcgi', {});
+        res.json({
+            success: true,
+            message: 'Sessão encerrada'
+        });
+    } catch (error) {
+        // Mesmo com erro, consideramos logout ok (sessão pode já ter expirado)
+        res.json({
+            success: true,
+            message: 'Sessão encerrada'
+        });
+    }
+});
 
 module.exports = router;

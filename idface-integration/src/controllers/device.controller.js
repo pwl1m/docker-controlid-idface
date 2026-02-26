@@ -51,143 +51,125 @@ class DeviceController {
 
     /**
      * GET /api/device/config
-     * Obtém configurações gerais do device
+     * Retorna as configurações atuais do dispositivo
+     * Firmware 6.23+: precisa especificar os campos desejados
      */
     async getConfig(req, res) {
         try {
-            // Campos comuns do general_cfg
-            const fields = [
-                'identification_mode',
-                'multi_factor_authentication', 
+            // Campos mais comuns para configuração
+            const fieldsToGet = [
+                'beep_enabled',
+                'voice_enabled',
+                'relay1_timeout',
+                'relay2_timeout',
                 'identification_timeout',
-                'beep',
-                'voice',
-                'relay_time',
+                'anti_passback',
                 'door_sensor_mode',
-                'anti_passback'
+                'face_match_threshold',
+                'max_templates'
             ];
 
-            const result = await this.idFaceService.postFcgi('get_configuration.fcgi', {
-                general: fields
+            const result = await idFaceService.postFcgi('get_configuration.fcgi', {
+                general: fieldsToGet
             });
+            
+            const config = result.general || result.data || result;
 
             res.json({
                 success: true,
-                config: result.general || result,
-                fields_available: fields
+                config: config,
+                fields_requested: fieldsToGet,
+                note: 'Firmware 6.23+ requer campos específicos'
             });
-
         } catch (error) {
-            logger.error('[DEVICE] Erro ao obter config:', error.message);
+            logger.error('[DEVICE] getConfig error:', error.message);
             res.status(500).json({ error: error.message });
         }
     }
 
     /**
      * PUT /api/device/config
-     * Atualiza configurações gerais do device
-     * Body: { identification_timeout: 30, beep: 1, voice: 1, ... }
+     * Atualiza configurações do dispositivo
      */
     async setConfig(req, res) {
         try {
-            const config = req.body;
+            const updates = req.body;
 
-            if (!config || Object.keys(config).length === 0) {
-                return res.status(400).json({ 
-                    error: 'Body vazio',
-                    example: { identification_timeout: '30', beep: '1' }
-                });
+            if (!updates || Object.keys(updates).length === 0) {
+                return res.status(400).json({ error: 'Nenhuma configuração fornecida' });
             }
 
-            // Converter todos os valores para string (requisito do ControlID)
-            const stringConfig = {};
-            for (const [key, value] of Object.entries(config)) {
-                stringConfig[key] = String(value);
-            }
-
-            logger.info(`[DEVICE] Atualizando config: ${JSON.stringify(stringConfig)}`);
-
-            const result = await this.idFaceService.postFcgi('set_configuration.fcgi', {
-                general: stringConfig
+            await idFaceService.postFcgi('set_configuration.fcgi', {
+                general: updates
             });
 
             res.json({
                 success: true,
-                updated: stringConfig,
-                result: result
+                message: 'Configurações atualizadas',
+                applied: updates
             });
-
         } catch (error) {
-            logger.error('[DEVICE] Erro ao atualizar config:', error.message);
+            logger.error('[DEVICE] setConfig error:', error.message);
             res.status(500).json({ error: error.message });
         }
     }
 
     /**
      * GET /api/device/config/identification-timeout
-     * Obtém o timeout de identificação atual
      */
     async getIdentificationTimeout(req, res) {
         try {
-            const result = await this.idFaceService.postFcgi('get_configuration.fcgi', {
+            const result = await idFaceService.postFcgi('get_configuration.fcgi', {
                 general: ['identification_timeout']
             });
-
-            const timeout = result.general?.identification_timeout || '30';
+            
+            const timeout = result.general?.identification_timeout || 
+                           result.identification_timeout ||
+                           '30';
 
             res.json({
                 success: true,
-                identification_timeout: Number(timeout),
+                identification_timeout: parseInt(timeout),
                 unit: 'seconds',
                 note: 'Tempo máximo para dispositivo aguardar identificação'
             });
-
         } catch (error) {
-            logger.error('[DEVICE] Erro ao obter timeout:', error.message);
+            logger.error('[DEVICE] getIdentificationTimeout error:', error.message);
             res.status(500).json({ error: error.message });
         }
     }
 
     /**
      * PUT /api/device/config/identification-timeout
-     * Atualiza o timeout de identificação
-     * Body: { timeout: 30 } (em segundos, 5-120)
      */
     async setIdentificationTimeout(req, res) {
         try {
             const { timeout } = req.body;
 
-            if (timeout === undefined || timeout === null) {
+            if (timeout === undefined) {
+                return res.status(400).json({ error: 'timeout é obrigatório' });
+            }
+
+            const timeoutInt = parseInt(timeout);
+            if (isNaN(timeoutInt) || timeoutInt < 5 || timeoutInt > 120) {
                 return res.status(400).json({ 
-                    error: 'timeout é obrigatório',
-                    example: { timeout: 30 }
+                    error: 'timeout deve ser entre 5 e 120 segundos' 
                 });
             }
 
-            const value = Number(timeout);
-            if (value < 5 || value > 120) {
-                return res.status(400).json({ 
-                    error: 'timeout deve ser entre 5 e 120 segundos'
-                });
-            }
-
-            logger.info(`[DEVICE] Atualizando identification_timeout para ${value}s`);
-
-            const result = await this.idFaceService.postFcgi('set_configuration.fcgi', {
+            await idFaceService.postFcgi('set_configuration.fcgi', {
                 general: {
-                    identification_timeout: String(value)
+                    identification_timeout: String(timeoutInt)
                 }
             });
 
             res.json({
                 success: true,
-                identification_timeout: value,
-                unit: 'seconds',
-                result
+                identification_timeout: timeoutInt,
+                message: `Timeout alterado para ${timeoutInt} segundos`
             });
-
         } catch (error) {
-            logger.error('[DEVICE] Erro ao atualizar timeout:', error.message);
+            logger.error('[DEVICE] setIdentificationTimeout error:', error.message);
             res.status(500).json({ error: error.message });
         }
     }
