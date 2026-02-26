@@ -307,13 +307,13 @@ curl -s -X POST "$BASE_URL/api/enrollment/face/test" \
 
 ## Documentação Adicional
 
-https://www.controlid.com.br/docs/idface-en/
-https://github.com/controlid/integracao/tree/master/Controle%20de%20Acesso
-https://github.com/controlid/Exemplos-dedicados-a-linha-Acesso
-https://github.com/controlid/integracao
-https://documenter.getpostman.com/view/10800185/2s9YJgSKm2#intro
-https://www.controlid.com.br/docs/access-api-pt/particularidade-dos-produtos/particulariade-terminais-control-id/#idface
-https://www.controlid.com.br/docs/access-api-en/objects/introduction-to-objects/
-https://www.controlid.com.br/docs/access-api-pt/particularidade-dos-produtos/interfonia-sip-idface/
-https://www.controlid.com.br/docs/idface-pt/interfonia/configuracoes-interfonia/
-https://www.controlid.com.br/docs/access-api-en/operating-modes/introduction-to-operating-modes/
+- https://www.controlid.com.br/docs/idface-en/
+- https://github.com/controlid/integracao/tree/master/Controle%20de%20Acesso
+- https://github.com/controlid/Exemplos-dedicados-a-linha-Acesso
+- https://github.com/controlid/integracao
+- https://documenter.getpostman.com/view/10800185/2s9YJgSKm2#intro
+- https://www.controlid.com.br/docs/access-api-pt/particularidade-dos-produtos/particulariade-terminais-control-id/#idface
+- https://www.controlid.com.br/docs/access-api-en/objects/introduction-to-objects/
+- https://www.controlid.com.br/docs/access-api-pt/particularidade-dos-produtos/interfonia-sip-idface/
+- https://www.controlid.com.br/docs/idface-pt/interfonia/configuracoes-interfonia/
+- https://www.controlid.com.br/docs/access-api-en/operating-modes/introduction-to-operating-modes/
