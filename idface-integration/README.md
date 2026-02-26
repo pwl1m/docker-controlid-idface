@@ -50,7 +50,7 @@ DEVICE_PASSWORD=admin
 
 # Servidor
 PORT=3001
-SERVER_IP=192.168.10.18                    # Testar se vazio auto-conectar
+SERVER_IP= # Testar se vazio auto-conectar
 
 # Push (comunicação com dispositivo)
 PUSH_REQUEST_TIMEOUT=4000
