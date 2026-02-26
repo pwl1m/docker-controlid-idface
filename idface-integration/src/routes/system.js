@@ -185,4 +185,81 @@ router.post('/hash-password', requireAuth, async (req, res) => {
     }
 });
 
+// ============ Network (Configurações de Rede) ============
+
+// GET /api/system/network — Obter configurações de rede atuais
+router.get('/network', requireAuth, async (req, res) => {
+    try {
+        // Obtém informações de sistema que incluem dados de rede
+        const sysInfo = await idFaceService.getSystemInformation();
+        
+        const network = {
+            ip: sysInfo.ip_address || sysInfo.ip,
+            netmask: sysInfo.netmask,
+            gateway: sysInfo.gateway,
+            mac: sysInfo.mac_address || sysInfo.mac,
+            hostname: sysInfo.hostname || sysInfo.device_hostname,
+            dns_primary: sysInfo.dns_primary || sysInfo.dns1,
+            dns_secondary: sysInfo.dns_secondary || sysInfo.dns2,
+            web_server_port: sysInfo.web_server_port || 80,
+            ssl_enabled: sysInfo.ssl_enabled || false
+        };
+
+        res.json({
+            success: true,
+            network
+        });
+    } catch (error) {
+        logger.error('GET /system/network error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT /api/system/network — Alterar configurações de rede
+// Body: { ip, netmask, gateway, dns_primary, dns_secondary, web_server_port, ... }
+router.put('/network', requireAuth, async (req, res) => {
+    try {
+        const {
+            ip,
+            netmask,
+            gateway,
+            dns_primary,
+            dns_secondary,
+            web_server_port,
+            ssl_enabled,
+            custom_hostname_enabled,
+            device_hostname
+        } = req.body;
+
+        // Monta payload apenas com campos fornecidos
+        const payload = {};
+        if (ip) payload.ip = ip;
+        if (netmask) payload.netmask = netmask;
+        if (gateway) payload.gateway = gateway;
+        if (dns_primary) payload.dns_primary = dns_primary;
+        if (dns_secondary) payload.dns_secondary = dns_secondary;
+        if (web_server_port) payload.web_server_port = parseInt(web_server_port);
+        if (ssl_enabled !== undefined) payload.ssl_enabled = ssl_enabled;
+        if (custom_hostname_enabled !== undefined) payload.custom_hostname_enabled = custom_hostname_enabled;
+        if (device_hostname) payload.device_hostname = device_hostname;
+
+        if (Object.keys(payload).length === 0) {
+            return res.status(400).json({ error: 'Nenhuma configuração fornecida' });
+        }
+
+        // Chama set_system_network.fcgi
+        await idFaceService.postFcgi('set_system_network.fcgi', payload);
+
+        res.json({
+            success: true,
+            message: 'Configurações de rede atualizadas',
+            applied: payload,
+            warning: 'O dispositivo pode reiniciar automaticamente após alteração de IP'
+        });
+    } catch (error) {
+        logger.error('PUT /system/network error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

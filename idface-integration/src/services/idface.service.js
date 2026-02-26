@@ -696,6 +696,49 @@ class IDFaceService {
     async deleteUser(id) {
         return this.destroyObjects('users', id);
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // MÉTODOS DE FOTO/FACE
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Obtém foto de um usuário com timestamp
+     * GET /user_get_image.fcgi
+     */
+    async userGetImageWithTimestamp(userId, getTimestamp = 1) {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/user_get_image.fcgi?user_id=${userId}&get_timestamp=${getTimestamp}&session=${this.session}`;
+            
+            const resp = await axios.get(url, { 
+                timeout: 15000,
+                responseType: getTimestamp == 1 ? 'json' : 'arraybuffer'
+            });
+            
+            return resp.data;
+        } catch (error) {
+            logger.error(`userGetImageWithTimestamp(${userId}) failed:`, error.message);
+            throw this.normalizeAxiosError(error, 'userGetImageWithTimestamp');
+        }
+    }
+
+    /**
+     * Lista usuários que têm foto cadastrada
+     * GET /user_list_images.fcgi
+     */
+    async userListImages(getTimestamp = 1) {
+        await this.ensureAuthenticated();
+        try {
+            const url = `${this.baseUrl}/user_list_images.fcgi?get_timestamp=${getTimestamp}&session=${this.session}`;
+            
+            const resp = await axios.get(url, { timeout: 15000 });
+            
+            return resp.data;
+        } catch (error) {
+            logger.error('userListImages failed:', error.message);
+            throw this.normalizeAxiosError(error, 'userListImages');
+        }
+    }
 }
 
 module.exports = new IDFaceService();

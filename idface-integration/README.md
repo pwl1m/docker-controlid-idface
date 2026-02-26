@@ -104,10 +104,39 @@ Base URL: `http://localhost:3001/api`
 
 | Método | Endpoint | Auth | Descrição |
 |--------|----------|------|-----------|
-| POST | `/enrollment/start` | ✓ | Iniciar captura |
-| GET | `/enrollment/status/:user_id` | ✓ | Status da captura |
-| DELETE | `/enrollment/cancel/:user_id` | ✓ | Cancelar captura |
-| POST | `/enrollment/base64` | ✓ | Cadastrar via base64 |
+| POST | `/enrollment/remote` | ✓ | Iniciar captura remota (face/card/pin) |
+| POST | `/enrollment/cancel` | ✓ | Cancelar captura em andamento |
+| GET | `/enrollment/face/list` | ✓ | Listar usuários com foto |
+| GET | `/enrollment/face/:user_id` | ✓ | Obter foto do usuário |
+| POST | `/enrollment/face/upload` | ✓ | Upload via base64 |
+| POST | `/enrollment/face/upload-binary` | ✓ | Upload via binary |
+| POST | `/enrollment/face/upload-multiple` | ✓ | Upload múltiplas fotos |
+| POST | `/enrollment/face/test` | ✓ | Testar se imagem é válida |
+| DELETE | `/enrollment/face/:user_id` | ✓ | Remover foto facial |
+
+### Session
+
+| Método | Endpoint | Auth | Descrição |
+|--------|----------|------|-----------|
+| GET | `/session/status` | ✓ | Verificar se sessão é válida |
+| POST | `/logout` | ✓ | Encerrar sessão |
+
+### Sistema (System)
+
+| Método | Endpoint | Auth | Descrição |
+|--------|----------|------|-----------|
+| GET | `/system/info` | - | Informações completas do dispositivo |
+| GET | `/system/session` | - | Status da sessão atual |
+| POST | `/system/sync-time` | ✓ | Sincronizar hora com servidor |
+| POST | `/system/reboot` | ✓ | Reiniciar dispositivo |
+| POST | `/system/message` | ✓ | Enviar mensagem para tela |
+| POST | `/system/backup` | ✓ | Backup dos objects |
+| POST | `/system/restore` | ✓ | Restaurar backup |
+| GET | `/system/config/:module` | - | Obter configuração por módulo |
+| POST | `/system/config` | ✓ | Definir configuração |
+| GET | `/system/network` | ✓ | Obter configurações de rede |
+| PUT | `/system/network` | ✓ | Alterar IP/gateway/DNS |
+| POST | `/system/hash-password` | ✓ | Gerar hash de senha |
 
 ### Logs e Estatísticas
 
@@ -196,11 +225,74 @@ echo "SESSION=$SESSION"
 ### Verificar Status da Sessão
 ```bash
 # API: GET /api/session/status
-curl -s "$BASE_URL/api/session/status" \
-  -H "Authorization: Bearer $SESSION" | jq
+curl -s "$BASE_URL/api/session/status" | jq
+# Retorna: { "valid": true, "session_is_valid": true }
 ```
 
-Se `API_KEY` não estiver configurada no `.env`, a autenticação é desabilitada.
+### Logout (Encerrar Sessão)
+```bash
+# API: POST /api/logout
+curl -s -X POST "$BASE_URL/api/logout" | jq
+# Retorna: { "success": true, "message": "Sessão encerrada" }
+```
+
+## Configurações de Rede
+
+### Obter Configurações Atuais
+```bash
+# API: GET /api/system/network
+curl -s "$BASE_URL/api/system/network" | jq
+# Retorna: ip, netmask, gateway, dns_primary, dns_secondary, mac, hostname
+```
+
+### Alterar IP do Dispositivo
+```bash
+# API: PUT /api/system/network
+# Alterar IP pode reiniciar o dispositivo
+curl -s -X PUT "$BASE_URL/api/system/network" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ip": "192.168.10.100",
+    "netmask": "255.255.255.0",
+    "gateway": "192.168.10.1",
+    "dns_primary": "8.8.8.8"
+  }' | jq
+```
+
+## Cadastro Facial
+
+### Upload de Foto via Base64
+```bash
+# API: POST /api/enrollment/face/upload
+curl -s -X POST "$BASE_URL/api/enrollment/face/upload" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 10,
+    "image_base64": "/9j/4AAQSkZJRgABAQ...",
+    "match": true
+  }' | jq
+```
+
+### Listar Usuários com Foto
+```bash
+# API: GET /api/enrollment/face/list
+curl -s "$BASE_URL/api/enrollment/face/list" | jq
+```
+
+### Obter Foto de um Usuário
+```bash
+# API: GET /api/enrollment/face/:user_id
+curl -s "$BASE_URL/api/enrollment/face/10" --output foto.jpg
+```
+
+### Testar se Imagem é Válida
+```bash
+# API: POST /api/enrollment/face/test
+# Retorna scores de qualidade e se face foi detectada
+curl -s -X POST "$BASE_URL/api/enrollment/face/test" \
+  -H "Content-Type: application/json" \
+  -d '{"image_base64": "/9j/4AAQ..."}' | jq
+```
 
 ### Dispositivo não responde
 
