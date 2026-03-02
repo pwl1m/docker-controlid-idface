@@ -242,7 +242,6 @@ Base URL: `http://localhost:3001/api`
 ## Custodia 
 ### Modo Padrão (1:N Face Only)
 [Pessoa chega] → [Device captura rosto] → [Compara com TODOS os templates]
-                                                      ↓
                                              [Match encontrado?]
                                                    /        \
                                                  SIM        NÃO
