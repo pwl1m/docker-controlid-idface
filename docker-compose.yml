@@ -1,5 +1,6 @@
 services:
-  idface-integration:
+  idface-container:
+    container_name: idface-container
     build:
       context: .
       dockerfile: Dockerfile

@@ -1,7 +1,7 @@
 {
-  "name": "idface-integration",
+  "name": "idface-container",
   "version": "1.0.0",
-  "description": "Integração com dispositivo ControlID IDFace",
+  "description": "Container para dispositivo ControlID IDFace",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

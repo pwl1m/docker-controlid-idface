@@ -271,7 +271,7 @@ require('dotenv').config();
     async function startServer() {
         try {
             logger.info('==========================================');
-            logger.info('🚀 Iniciando servidor IDFace Integration');
+            logger.info('🚀 Iniciando servidor IDFace Container');
             logger.info('==========================================');
             logger.info(`📋 Dispositivo: ${config.device.ip}`);
             logger.info(`📋 Porta: ${config.server.port}`);

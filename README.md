@@ -1,4 +1,4 @@
-# IDFace Integration
+# IDFace Container
 
 API backend para integração com dispositivos **ControlID iDFace** (reconhecimento facial). Abstrai a comunicação FCGI do equipamento e expõe endpoints REST para frontend/integrações.
 
@@ -27,11 +27,11 @@ Segurança é por API key no middleware auth.js (x-api-key ou api_key).
 
 idface.service.js — núcleo de integração com o device.
 
-idface-integration/src/index.js — bootstrap, callbacks e entrada HTTP.
+src/index.js — bootstrap, callbacks e entrada HTTP.
 
-idface-integration/src/routes/index.js — mapa de tudo que a API expõe.
+src/routes/index.js — mapa de tudo que a API expõe.
 
-idface-integration/src/config/index.js — IP do device, porta, API key, flags.
+src/config/index.js — IP do device, porta, API key, flags.
 
 Controllers de domínio: device.controller.js, statistics.controller.js, enrollment.controller.js, interfonia.controller.js, export.controller.js.
 
@@ -41,7 +41,7 @@ Direto (principal): idface.service.js.
 
 Indireto (via service): praticamente todos os controllers em controllers/.
 
-Também há fluxo inverso Device -> Backend em callbacks de enrollment/ e notificações no idface-integration/src/index.js.
+Também há fluxo inverso Device -> Backend em callbacks de enrollment/ e notificações no src/index.js.
 
 ## Pontos importantes
 
@@ -68,7 +68,8 @@ O endpoint /api/login existe e autentica no device, mas o middleware de proteç�
 ## Estrutura do Projeto
 
 ```
-idface-integration/
+docker-controlid/
+├── docs/
 ├── src/
 │   ├── index.js                    # Entry point
 │   ├── config/index.js             # Configurações (env vars)

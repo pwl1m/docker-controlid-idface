@@ -7,3 +7,9 @@
 *.csv
 *.sh
 /scripts/
+node_modules/
+npm-debug.log
+__tests__/
+src/__tests__/
+.DS_Store
+.vscode/

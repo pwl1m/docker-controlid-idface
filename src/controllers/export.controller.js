@@ -329,7 +329,7 @@ class ExportController {
     </div>
     
     <div class="footer">
-        Relatório gerado automaticamente pelo Sistema iDFace Integration
+        Relatório gerado automaticamente pelo Sistema iDFace Container
     </div>
     
     <script class="no-print">
