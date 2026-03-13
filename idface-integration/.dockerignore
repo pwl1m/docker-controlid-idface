@@ -3,4 +3,7 @@ npm-debug.log
 .env
 .git
 .gitignore
-README.md
+*.md
+src/__tests__
+.DS_Store
+.vscode

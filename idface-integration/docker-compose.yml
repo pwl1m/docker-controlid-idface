@@ -2,10 +2,14 @@ services:
   idface-integration:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-    network_mode: host
+      dockerfile: Dockerfile
     env_file:
       - .env
-    volumes:
-      - ./src:/app/src
+    ports:
+      - "8051:3000"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

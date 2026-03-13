@@ -61,8 +61,8 @@ O endpoint /api/login existe e autentica no device, mas o middleware de proteç�
 
 ## Stack
 
-- **Node.js 18** + Express
-- **Docker** (network_mode: host)
+- **Node.js 20** + Express
+- **Docker** (bridge + mapeamento de porta `8051:3000`)
 - **Dispositivo**: ControlID iDFace (firmware 6.23)
 
 ## Estrutura do Projeto
@@ -80,7 +80,7 @@ idface-integration/
 │   ├── routes/                     # Definição de rotas
 │   ├── middlewares/auth.js         # Autenticação via API Key
 │   └── __tests__/                  # Testes Jest
-├── docker/Dockerfile
+├── Dockerfile
 ├── docker-compose.yml
 └── package.json
 ```
@@ -94,7 +94,7 @@ DEVICE_LOGIN=admin
 DEVICE_PASSWORD=admin
 
 # Servidor
-PORT=3001
+PORT=3000
 SERVER_IP= # Testar se vazio auto-conectar
 
 # Push (comunicação com dispositivo)
@@ -113,7 +113,7 @@ SHOW_POLLING_LOGS=false
 ## Setup
 ## API Endpoints
 
-Base URL: `http://localhost:3001/api`
+Base URL: `http://localhost:8051/api`
 
 ### Autenticação
 

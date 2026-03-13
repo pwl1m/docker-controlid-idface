@@ -12,7 +12,7 @@ module.exports = {
     
     // Servidor (esta aplicação)
     server: {
-        port: parseInt(process.env.PORT, 10) || 3001,
+        port: parseInt(process.env.PORT, 10) || 3000,
         ip: process.env.SERVER_IP || null, // Se null, usa ip.address() automaticamente
     },
     
